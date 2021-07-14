@@ -126,43 +126,8 @@ Taxonomies can be ordered by either alphabetical key or by the number of content
 
 ```go-html-template
 <ul>
-    {{ $type := .Type }}
-    {{ range $key, $value := .Data.Terms.Alphabetical }}
-        {{ $name := .Name }}
-        {{ $count := .Count }}
-        {{ with $.Site.GetPage (printf "/%s/%s" $type $name) }}
-            <li><a href="{{ .Permalink }}">{{ $name }}</a> {{ $count }}</li>
-        {{ end }}
-    {{ end }}
-</ul>
-```
-
-### Order by Popularity Example
-
-```go-html-template
-<ul>
-    {{ $type := .Type }}
-    {{ range $key, $value := .Data.Terms.ByCount }}
-        {{ $name := .Name }}
-        {{ $count := .Count }}
-        {{ with $.Site.GetPage (printf "/%s/%s" $type $name) }}
-            <li><a href="{{ .Permalink }}">{{ $name }}</a> {{ $count }}</li>
-        {{ end }}
-    {{ end }}
-</ul>
-```
-
-### Order by Least Popular Example
-
-```go-html-template
-<ul>
-    {{ $type := .Type }}
-    {{ range $key, $value := .Data.Terms.ByCount.Reverse }}
-        {{ $name := .Name }}
-        {{ $count := .Count }}
-        {{ with $.Site.GetPage (printf "/%s/%s" $type $name) }}
-            <li><a href="{{ .Permalink }}">{{ $name }}</a> {{ $count }}</li>
-        {{ end }}
+    {{ range .Data.Terms.Alphabetical }}
+            <li><a href="{{ .Page.Permalink }}">{{ .Page.Title }}</a> {{ .Count }}</li>
     {{ end }}
 </ul>
 ```
@@ -175,7 +140,11 @@ Hugo uses both `date` and `weight` to order content within taxonomies.
 
 Each piece of content in Hugo can optionally be assigned a date. It can also be assigned a weight for each taxonomy it is assigned to.
 
-When iterating over content within taxonomies, the default sort is the same as that used for [section and list pages]() first by weight then by date. This means that if the weights for two pieces of content are the same, than the more recent content will be displayed first. The default weight for any piece of content is 0.
+When iterating over content within taxonomies, the default sort is the same as that used for section and list pages: first by weight, then by date. This means that if the weights for two pieces of content are the same, then the more recent content will be displayed first.
+
+The default weight for any piece of content is 0. Zero means "does not have a weight", not "has a weight of numerical value zero".
+
+Weights of zero are thus treated specially: if two pages have unequal weights, and one of them is zero, then the zero-weighted page will always appear after the other one, regardless of the other's weight. Zero weights should thus be used with care: for example, if both positive and negative weights are used to extend a sequence in both directions, a zero-weighted page will appear not in the middle of the list, but at the end.
 
 ### Assign Weight
 
@@ -234,13 +203,9 @@ Because we are leveraging the front matter system to define taxonomies for conte
 ### Example: List Tags in a Single Page Template
 
 ```go-html-template
-{{ $taxo := "tags" }} <!-- Use the plural form here -->
-<ul id="{{ $taxo }}">
-    {{ range .Param $taxo }}
-        {{ $name := . }}
-        {{ with $.Site.GetPage (printf "/%s/%s" $taxo $name) }}
-            <li><a href="{{ .Permalink }}">{{ $name }}</a></li>
-        {{ end }}
+<ul>
+    {{ range (.GetTerms "tags") }}
+        <li><a href="{{ .Permalink }}">{{ .LinkTitle }}</a></li>
     {{ end }}
 </ul>
 ```
@@ -312,11 +277,9 @@ The following example displays all terms in a site's tags taxonomy:
 ### Example: List All Site Tags {#example-list-all-site-tags}
 
 ```go-html-template
-<ul id="all-tags">
-    {{ range $name, $taxonomy := .Site.Taxonomies.tags }}
-        {{ with $.Site.GetPage (printf "/tags/%s" $name) }}
-            <li><a href="{{ .Permalink }}">{{ $name }}</a></li>
-        {{ end }}
+<ul>
+    {{ range .Site.Taxonomies.tags }}
+            <li><a href="{{ .Page.Permalink }}">{{ .Page.Title }}</a> {{ .Count }}</li>
     {{ end }}
 </ul>
 ```

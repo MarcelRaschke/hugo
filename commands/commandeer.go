@@ -1,4 +1,4 @@
-// Copyright 2018 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,21 @@ package commands
 import (
 	"bytes"
 	"errors"
-
-	"github.com/gohugoio/hugo/common/herrors"
-
 	"io/ioutil"
-
-	jww "github.com/spf13/jwalterweatherman"
-
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
+
+	hconfig "github.com/gohugoio/hugo/config"
+
+	"golang.org/x/sync/semaphore"
+
+	"github.com/gohugoio/hugo/common/herrors"
+	"github.com/gohugoio/hugo/common/hugo"
+
+	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/config"
@@ -48,14 +50,16 @@ import (
 
 type commandeerHugoState struct {
 	*deps.DepsCfg
-	hugo     *hugolib.HugoSites
-	fsCreate sync.Once
+	hugoSites *hugolib.HugoSites
+	fsCreate  sync.Once
+	created   chan struct{}
 }
 
 type commandeer struct {
 	*commandeerHugoState
 
-	logger *loggers.Logger
+	logger       loggers.Logger
+	serverConfig *config.Server
 
 	// Currently only set when in "fast render mode". But it seems to
 	// be fast enough that we could maybe just add it for all server modes.
@@ -69,7 +73,7 @@ type commandeer struct {
 
 	visitedURLs *types.EvictingStringQueue
 
-	doWithCommandeer func(c *commandeer) error
+	cfgInit func(c *commandeer) error
 
 	// We watch these for changes.
 	configFiles []string
@@ -83,16 +87,30 @@ type commandeer struct {
 	doLiveReload        bool
 	fastRenderMode      bool
 	showErrorInBrowser  bool
+	wasError            bool
 
 	configured bool
 	paused     bool
+
+	fullRebuildSem *semaphore.Weighted
 
 	// Any error from the last build.
 	buildErr error
 }
 
+func newCommandeerHugoState() *commandeerHugoState {
+	return &commandeerHugoState{
+		created: make(chan struct{}),
+	}
+}
+
+func (c *commandeerHugoState) hugo() *hugolib.HugoSites {
+	<-c.created
+	return c.hugoSites
+}
+
 func (c *commandeer) errCount() int {
-	return int(c.logger.ErrorCounter.Count())
+	return int(c.logger.LogCounters().ErrorCounter.Count())
 }
 
 func (c *commandeer) getErrorWithContext() interface{} {
@@ -105,7 +123,7 @@ func (c *commandeer) getErrorWithContext() interface{} {
 	m := make(map[string]interface{})
 
 	m["Error"] = errors.New(removeErrorPrefixFromLog(c.logger.Errors()))
-	m["Version"] = hugoVersionString()
+	m["Version"] = hugo.BuildVersionString()
 
 	fe := herrors.UnwrapErrorWithFileContext(c.buildErr)
 	if fe != nil {
@@ -114,7 +132,7 @@ func (c *commandeer) getErrorWithContext() interface{} {
 
 	if c.h.verbose {
 		var b bytes.Buffer
-		herrors.FprintStackTrace(&b, c.buildErr)
+		herrors.FprintStackTraceFromErr(&b, c.buildErr)
 		m["StackTrace"] = b.String()
 	}
 
@@ -135,25 +153,30 @@ func (c *commandeer) initFs(fs *hugofs.Fs) error {
 	return nil
 }
 
-func newCommandeer(mustHaveConfigFile, running bool, h *hugoBuilderCommon, f flagsToConfigHandler, doWithCommandeer func(c *commandeer) error, subCmdVs ...*cobra.Command) (*commandeer, error) {
-
+func newCommandeer(mustHaveConfigFile, running bool, h *hugoBuilderCommon, f flagsToConfigHandler, cfgInit func(c *commandeer) error, subCmdVs ...*cobra.Command) (*commandeer, error) {
 	var rebuildDebouncer func(f func())
 	if running {
 		// The time value used is tested with mass content replacements in a fairly big Hugo site.
 		// It is better to wait for some seconds in those cases rather than get flooded
 		// with rebuilds.
-		rebuildDebouncer, _, _ = debounce.New(4 * time.Second)
+		rebuildDebouncer = debounce.New(4 * time.Second)
+	}
+
+	out := ioutil.Discard
+	if !h.quiet {
+		out = os.Stdout
 	}
 
 	c := &commandeer{
 		h:                   h,
 		ftch:                f,
-		commandeerHugoState: &commandeerHugoState{},
-		doWithCommandeer:    doWithCommandeer,
+		commandeerHugoState: newCommandeerHugoState(),
+		cfgInit:             cfgInit,
 		visitedURLs:         types.NewEvictingStringQueue(10),
 		debounce:            rebuildDebouncer,
+		fullRebuildSem:      semaphore.NewWeighted(1),
 		// This will be replaced later, but we need something to log to before the configuration is read.
-		logger: loggers.NewLogger(jww.LevelError, jww.LevelError, os.Stdout, ioutil.Discard, running),
+		logger: loggers.NewLogger(jww.LevelWarn, jww.LevelError, out, ioutil.Discard, running),
 	}
 
 	return c, c.loadConfig(mustHaveConfigFile, running)
@@ -222,7 +245,6 @@ func (f *fileChangeDetector) PrepareNew() {
 }
 
 func (c *commandeer) loadConfig(mustHaveConfigFile, running bool) error {
-
 	if c.DepsCfg == nil {
 		c.DepsCfg = &deps.DepsCfg{}
 	}
@@ -248,39 +270,48 @@ func (c *commandeer) loadConfig(mustHaveConfigFile, running bool) error {
 		sourceFs = c.DepsCfg.Fs.Source
 	}
 
-	doWithConfig := func(cfg config.Provider) error {
+	environment := c.h.getEnvironment(running)
 
+	doWithConfig := func(cfg config.Provider) error {
 		if c.ftch != nil {
 			c.ftch.flagsToConfig(cfg)
 		}
 
 		cfg.Set("workingDir", dir)
-
+		cfg.Set("environment", environment)
 		return nil
 	}
 
-	doWithCommandeer := func(cfg config.Provider) error {
+	cfgSetAndInit := func(cfg config.Provider) error {
 		c.Cfg = cfg
-		if c.doWithCommandeer == nil {
+		if c.cfgInit == nil {
 			return nil
 		}
-		err := c.doWithCommandeer(c)
+		err := c.cfgInit(c)
 		return err
 	}
 
+	configPath := c.h.source
+	if configPath == "" {
+		configPath = dir
+	}
 	config, configFiles, err := hugolib.LoadConfig(
-		hugolib.ConfigSourceDescriptor{Fs: sourceFs, Path: c.h.source, WorkingDir: dir, Filename: c.h.cfgFile},
-		doWithCommandeer,
+		hugolib.ConfigSourceDescriptor{
+			Fs:           sourceFs,
+			Logger:       c.logger,
+			Path:         configPath,
+			WorkingDir:   dir,
+			Filename:     c.h.cfgFile,
+			AbsConfigDir: c.h.getConfigDir(dir),
+			Environment:  environment,
+		},
+		cfgSetAndInit,
 		doWithConfig)
 
-	if err != nil {
-		if mustHaveConfigFile {
-			return err
-		}
-		if err != hugolib.ErrNoConfigFile {
-			return err
-		}
-
+	if err != nil && mustHaveConfigFile {
+		return err
+	} else if mustHaveConfigFile && len(configFiles) == 0 {
+		return hugolib.ErrNoConfigFile
 	}
 
 	c.configFiles = configFiles
@@ -291,14 +322,14 @@ func (c *commandeer) loadConfig(mustHaveConfigFile, running bool) error {
 	}
 
 	// Set some commonly used flags
-	c.doLiveReload = !c.h.buildWatch && !c.Cfg.GetBool("disableLiveReload")
+	c.doLiveReload = running && !c.Cfg.GetBool("disableLiveReload")
 	c.fastRenderMode = c.doLiveReload && !c.Cfg.GetBool("disableFastRender")
 	c.showErrorInBrowser = c.doLiveReload && !c.Cfg.GetBool("disableBrowserError")
 
 	// This is potentially double work, but we need to do this one more time now
 	// that all the languages have been configured.
-	if c.doWithCommandeer != nil {
-		if err := c.doWithCommandeer(c); err != nil {
+	if c.cfgInit != nil {
+		if err := c.cfgInit(c); err != nil {
 			return err
 		}
 	}
@@ -310,6 +341,10 @@ func (c *commandeer) loadConfig(mustHaveConfigFile, running bool) error {
 
 	cfg.Logger = logger
 	c.logger = logger
+	c.serverConfig, err = hconfig.DecodeServer(cfg.Cfg)
+	if err != nil {
+		return err
+	}
 
 	createMemFs := config.GetBool("renderToMemory")
 
@@ -338,21 +373,30 @@ func (c *commandeer) loadConfig(mustHaveConfigFile, running bool) error {
 				// to make that decision.
 				irrelevantRe: regexp.MustCompile(`\.map$`),
 			}
+
 			changeDetector.PrepareNew()
 			fs.Destination = hugofs.NewHashingFs(fs.Destination, changeDetector)
 			c.changeDetector = changeDetector
 		}
 
+		if c.Cfg.GetBool("logPathWarnings") {
+			fs.Destination = hugofs.NewCreateCountingFs(fs.Destination)
+		}
+
+		// To debug hard-to-find path issues.
+		// fs.Destination = hugofs.NewStacktracerFs(fs.Destination, `fr/fr`)
+
 		err = c.initFs(fs)
 		if err != nil {
+			close(c.created)
 			return
 		}
 
 		var h *hugolib.HugoSites
 
 		h, err = hugolib.NewHugoSites(*c.DepsCfg)
-		c.hugo = h
-
+		c.hugoSites = h
+		close(c.created)
 	})
 
 	if err != nil {
@@ -365,23 +409,5 @@ func (c *commandeer) loadConfig(mustHaveConfigFile, running bool) error {
 	}
 	config.Set("cacheDir", cacheDir)
 
-	cfg.Logger.INFO.Println("Using config file:", config.ConfigFileUsed())
-
-	themeDir := c.hugo.PathSpec.GetFirstThemeDir()
-	if themeDir != "" {
-		if _, err := sourceFs.Stat(themeDir); os.IsNotExist(err) {
-			return newSystemError("Unable to find theme Directory:", themeDir)
-		}
-	}
-
-	dir, themeVersionMismatch, minVersion := c.isThemeVsHugoVersionMismatch(sourceFs)
-
-	if themeVersionMismatch {
-		name := filepath.Base(dir)
-		cfg.Logger.ERROR.Printf("%s theme does not support Hugo version %s. Minimum version required is %s\n",
-			strings.ToUpper(name), helpers.CurrentHugoVersion.ReleaseVersion(), minVersion)
-	}
-
 	return nil
-
 }

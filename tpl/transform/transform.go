@@ -15,9 +15,10 @@
 package transform
 
 import (
-	"bytes"
 	"html"
 	"html/template"
+
+	"github.com/gohugoio/hugo/cache/namedmemcache"
 
 	"github.com/gohugoio/hugo/deps"
 	"github.com/gohugoio/hugo/helpers"
@@ -26,14 +27,22 @@ import (
 
 // New returns a new instance of the transform-namespaced template functions.
 func New(deps *deps.Deps) *Namespace {
+	cache := namedmemcache.New()
+	deps.BuildStartListeners.Add(
+		func() {
+			cache.Clear()
+		})
+
 	return &Namespace{
-		deps: deps,
+		cache: cache,
+		deps:  deps,
 	}
 }
 
 // Namespace provides template functions for the "transform" namespace.
 type Namespace struct {
-	deps *deps.Deps
+	cache *namedmemcache.Cache
+	deps  *deps.Deps
 }
 
 // Emojify returns a copy of s with all emoji codes replaced with actual emojis.
@@ -56,7 +65,7 @@ func (ns *Namespace) Highlight(s interface{}, lang, opts string) (template.HTML,
 		return "", err
 	}
 
-	highlighted, _ := ns.deps.ContentSpec.Highlight(ss, lang, opts)
+	highlighted, _ := ns.deps.ContentSpec.Converters.Highlight(ss, lang, opts)
 	return template.HTML(highlighted), nil
 }
 
@@ -81,12 +90,6 @@ func (ns *Namespace) HTMLUnescape(s interface{}) (string, error) {
 	return html.UnescapeString(ss), nil
 }
 
-var (
-	markdownTrimPrefix         = []byte("<p>")
-	markdownTrimSuffix         = []byte("</p>\n")
-	markdownParagraphIndicator = []byte("<p")
-)
-
 // Markdownify renders a given input from Markdown to HTML.
 func (ns *Namespace) Markdownify(s interface{}) (template.HTML, error) {
 	ss, err := cast.ToStringE(s)
@@ -94,24 +97,15 @@ func (ns *Namespace) Markdownify(s interface{}) (template.HTML, error) {
 		return "", err
 	}
 
-	m := ns.deps.ContentSpec.RenderBytes(
-		&helpers.RenderingContext{
-			Cfg:     ns.deps.Cfg,
-			Content: []byte(ss),
-			PageFmt: "markdown",
-			Config:  ns.deps.ContentSpec.BlackFriday,
-		},
-	)
-
-	// Strip if this is a short inline type of text.
-	first := bytes.Index(m, markdownParagraphIndicator)
-	last := bytes.LastIndex(m, markdownParagraphIndicator)
-	if first == last {
-		m = bytes.TrimPrefix(m, markdownTrimPrefix)
-		m = bytes.TrimSuffix(m, markdownTrimSuffix)
+	b, err := ns.deps.ContentSpec.RenderMarkdown([]byte(ss))
+	if err != nil {
+		return "", err
 	}
 
-	return template.HTML(m), nil
+	// Strip if this is a short inline type of text.
+	b = ns.deps.ContentSpec.TrimShortHTML(b)
+
+	return helpers.BytesToHTML(b), nil
 }
 
 // Plainify returns a copy of s with all HTML tags removed.

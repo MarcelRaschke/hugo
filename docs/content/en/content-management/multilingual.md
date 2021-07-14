@@ -26,7 +26,7 @@ You should define the available languages in a `languages` section in your site 
 The following is an example of a site configuration for a multilingual Hugo project:
 
 {{< code-toggle file="config" >}}
-DefaultContentLanguage = "en"
+defaultContentLanguage = "en"
 copyright = "Everything is mine"
 
 [params]
@@ -47,9 +47,18 @@ weight = 2
 linkedin = "https://linkedin.com/fr/whoever"
 [languages.fr.params.navigation]
 help  = "Aide"
+
+[languages.ar]
+title = "مدونتي"
+weight = 2
+languagedirection = "rtl"
+
+[languages.pt-pt]
+title = "O meu blog"
+weight = 3
 {{< /code-toggle >}}
 
-Anything not defined in a `[languages]` block will fall back to the global value for that key (e.g., `copyright` for the English [`en`] language). This also works for `params`, as demonstrated witgh `help` above: You will get the value `Aide` in French and `Help` in all the languages without this parameter set.
+Anything not defined in a `languages` block will fall back to the global value for that key (e.g., `copyright` for the English `en` language). This also works for `params`, as demonstrated with `help` above: You will get the value `Aide` in French and `Help` in all the languages without this parameter set.
 
 With the configuration above, all content, sitemap, RSS feeds, paginations,
 and taxonomy pages will be rendered below `/` in English (your default content language) and then below `/fr` in French.
@@ -58,17 +67,19 @@ When working with front matter `Params` in [single page templates][singles], omi
 
 `defaultContentLanguage` sets the project's default language. If not set, the default language will be `en`.
 
-If the default language needs to be rendererd below its own language code (`/en`) like the others, set `defaultContentLanguageInSubdir: true`.
+If the default language needs to be rendered below its own language code (`/en`) like the others, set `defaultContentLanguageInSubdir: true`.
 
 Only the obvious non-global options can be overridden per language. Examples of global options are `baseURL`, `buildDrafts`, etc.
+
+**Please note:** use lowercase language codes, even when using regional languages (ie. use pt-pt instead of pt-PT). Currently Hugo language internals lowercase language codes, which can cause conflicts with settings like `defaultContentLanguage` which are not lowercased. Please track the evolution of this issue in [Hugo repository issue tracker](https://github.com/gohugoio/hugo/issues/7344)
 
 ### Disable a Language
 
 You can disable one or more languages. This can be useful when working on a new translation.
 
-```toml
+{{< code-toggle file="config" >}}
 disableLanguages = ["fr", "ja"]
-```
+{{< /code-toggle >}}
 
 Note that you cannot disable the default content language.
 
@@ -115,12 +126,12 @@ With the above, the two sites will be generated into `public` with their own roo
 ```bash
 public
 ├── en
-└── no
+└── fr
 ```
 
 **All URLs (i.e `.Permalink` etc.) will be generated from that root. So the English home page above will have its `.Permalink` set to `https://example.com/`.**
 
-When you run `hugo server` we will start multiple HTTP servers. You will typlically see something like this in the console:
+When you run `hugo server` we will start multiple HTTP servers. You will typically see something like this in the console:
 
 ```bash
 Web Server is available at 127.0.0.1:1313 (bind address 127.0.0.1)
@@ -159,7 +170,7 @@ plaque = "plaques"
 
 ## Translate Your Content
 
-There are two ways to manage your content translation, both ensures each page is assigned a language and linked to its translations.
+There are two ways to manage your content translations. Both ensure each page is assigned a language and is linked to its counterpart translations.
 
 ### Translation by filename
 
@@ -168,17 +179,17 @@ Considering the following example:
 1. `/content/about.en.md`
 2. `/content/about.fr.md`
 
-The first file is assigned the english language and linked to the second.
-The second file is assigned the french language and linked to the first.
+The first file is assigned the English language and is linked to the second.
+The second file is assigned the French language and is linked to the first.
 
-Their language is __assigned__ according to the language code added as __suffix to the filename__. 
+Their language is __assigned__ according to the language code added as a __suffix to the filename__. 
 
 By having the same **path and base filename**, the content pieces are __linked__ together as translated pages.
+
 {{< note >}}
-
-If a file is missing any language code, it will be assigned the default language.
-
+If a file has no language code, it will be assigned the default language.
 {{</ note >}}
+
 ### Translation by content directory
 
 This system uses different content directories for each of the languages. Each language's content directory is set using the `contentDir` param.
@@ -190,22 +201,22 @@ languages:
     weight: 10
     languageName: "English"
     contentDir: "content/english"
-  nn:
+  fr:
     weight: 20
     languageName: "Français"
     contentDir: "content/french"
 
 {{< /code-toggle >}}
 
-The value of `contentDir` can be any valid path, even absolute path references. The only restriction is that the content directories cannot overlap.
+The value of `contentDir` can be any valid path -- even absolute path references. The only restriction is that the content directories cannot overlap.
 
-Considering the following example in conjunction with the configuration above: 
+Considering the following example in conjunction with the configuration above:
 
 1. `/content/english/about.md`
 2. `/content/french/about.md`
 
-The first file is assigned the english language and is linked to the second.
-<br>The second file is assigned the french language and is linked to the first.
+The first file is assigned the English language and is linked to the second.
+The second file is assigned the French language and is linked to the first.
 
 Their language is __assigned__ according to the content directory they are __placed__ in.
 
@@ -213,7 +224,7 @@ By having the same **path and basename** (relative to their language content dir
 
 ### Bypassing default linking.
 
-Any pages sharing the same `translationKey`  set in front matter will be linked as translated pages regardless of basename or location.
+Any pages sharing the same `translationKey` set in front matter will be linked as translated pages regardless of basename or location.
 
 Considering the following example:
 
@@ -231,11 +242,11 @@ By setting the `translationKey` front matter param to `about` in all three pages
 
 ### Localizing permalinks
 
-Because paths and filenames are used to handle linking, all translated pages, except for the language part, will be sharing the same url.
+Because paths and filenames are used to handle linking, all translated pages will share the same URL (apart from the language subdirectory).
 
 To localize the URLs, the [`slug`]({{< ref "/content-management/organization/index.md#slug" >}}) or [`url`]({{< ref "/content-management/organization/index.md#url" >}}) front matter param can be set in any of the non-default language file. 
 
-For example, a french translation (`content/about.fr.md`) can have its own localized slug.
+For example, a French translation (`content/about.fr.md`) can have its own localized slug.
 
 {{< code-toggle >}}
 Title: A Propos
@@ -243,9 +254,10 @@ slug: "a-propos"
 {{< /code-toggle >}}
 
 
-At render, Hugo will build both `/about/` and `fr/a-propos/` while maintaning their translation linking.
+At render, Hugo will build both `/about/` and `/fr/a-propos/` while maintaining their translation linking.
+
 {{% note %}}
-If using `url`, remember to include the language part as well: `fr/compagnie/a-propos/`.
+If using `url`, remember to include the language part as well: `/fr/compagnie/a-propos/`.
 {{%/ note %}}
 
 ### Page Bundles
@@ -254,15 +266,13 @@ To avoid the burden of having to duplicate files, each Page Bundle inherits the 
 
 Therefore, from within a template, the page will have access to the files from all linked pages' bundles.
 
-If, across the linked bundles, two or more files share the same basenname, only one will be included and chosen as follows:
+If, across the linked bundles, two or more files share the same basename, only one will be included and chosen as follows:
 
-* File from current language Bundle, if present.
+* File from current language bundle, if present.
 * First file found across bundles by order of language `Weight`.
 
 {{% note %}}
-
-Page Bundle's resources follow the same language assignement logic as content files, be it by filename (`image.jpg`, `image.fr.jpg`) or by directory (`english/about/header.jpg`, `french/about/header.jpg`).
-
+Page Bundle resources follow the same language assignment logic as content files, both by filename (`image.jpg`, `image.fr.jpg`) and by directory (`english/about/header.jpg`, `french/about/header.jpg`).
 {{%/ note %}}
 
 ## Reference the Translated Content
@@ -277,18 +287,18 @@ To create a list of links to translated content, use a template similar to the f
     <li>
         <a href="{{ .Permalink }}">{{ .Lang }}: {{ .Title }}{{ if .IsPage }} ({{ i18n "wordCount" . }}){{ end }}</a>
     </li>
-    {{ end}}
+    {{ end }}
 </ul>
 {{ end }}
 {{< /code >}}
 
-The above can be put in a `partial` (i.e., inside `layouts/partials/`) and included in any template, be it for a [single content page][contenttemplate] or the [homepage][]. It will not print anything if there are no translations for a given page.
+The above can be put in a `partial` (i.e., inside `layouts/partials/`) and included in any template, whether a [single content page][contenttemplate] or the [homepage][]. It will not print anything if there are no translations for a given page.
 
 The above also uses the [`i18n` function][i18func] described in the next section.
 
 ### List All Available Languages
 
-`.AllTranslations` on a `Page` can be used to list all translations, including itself. Called on the home page it can be used to build a language navigator:
+`.AllTranslations` on a `Page` can be used to list all translations, including the page itself. On the home page it can be used to build a language navigator:
 
 
 {{< code file="layouts/partials/allLanguages.html" >}}
@@ -306,11 +316,13 @@ Hugo uses [go-i18n][] to support string translations. [See the project's source 
 Translations are collected from the `themes/<THEME>/i18n/` folder (built into the theme), as well as translations present in `i18n/` at the root of your project. In the `i18n`, the translations will be merged and take precedence over what is in the theme folder. Language files should be named according to [RFC 5646][] with names such as `en-US.toml`, `fr.toml`, etc.
 
 {{% note %}}
-From **Hugo 0.31** you no longer need to use a valid language code. It _can be_ anything.
+From **Hugo 0.31** you no longer need to use a valid language code. It can be anything.
 
 See https://github.com/gohugoio/hugo/issues/3564
 
 {{% /note %}}
+
+### Query basic translation
 
 From within your templates, use the `i18n` function like this:
 
@@ -318,47 +330,78 @@ From within your templates, use the `i18n` function like this:
 {{ i18n "home" }}
 ```
 
-This uses a definition like this one in `i18n/en-US.toml`:
+The function will search for the `"home"` id:
 
-```
+{{< code-toggle file="i18n/en-US" >}}
 [home]
 other = "Home"
+{{< /code-toggle >}}
+
+The result will be
+
+```
+Home
 ```
 
-Often you will want to use to the page variables in the translations strings. To do that, pass on the "." context when calling `i18n`:
+### Query a flexible translation with variables
+
+Often you will want to use the page variables in the translation strings. To do so, pass the `.` context when calling `i18n`:
 
 ```
 {{ i18n "wordCount" . }}
 ```
 
-This uses a definition like this one in `i18n/en-US.toml`:
+The function will pass the `.` context to the `"wordCount"` id:
 
-```
+{{< code-toggle file="i18n/en-US" >}}
 [wordCount]
 other = "This article has {{ .WordCount }} words."
-```
-An example of singular and plural form:
+{{< /code-toggle >}}
+
+Assume `.WordCount` in the context has value is 101. The result will be:
 
 ```
-[readingTime]
-one = "One minute read"
-other = "{{.Count}} minutes read"
+This article has 101 words.
 ```
-And then in the template:
+
+### Query a singular/plural translation
+
+In order to meet singular/plural requirement, you must pass a dictionary (map) with a numeric `.Count` property to the `i18n` function. The below example uses `.ReadingTime` variable which has a built-in `.Count` property.
 
 ```
 {{ i18n "readingTime" .ReadingTime }}
 ```
-To track down missing translation strings, run Hugo with the `--i18n-warnings` flag:
+
+The function will read `.Count` from `.ReadingTime` and evaluate where the number is singular (`one`) or plural (`other`). After that, it will pass to `readingTime` id:
+
+{{< code-toggle file="i18n/en-US" >}}
+[readingTime]
+one = "One minute to read"
+other = "{{.Count}} minutes to read"
+{{< /code-toggle >}}
+
+Assume `.ReadingTime.Count` in the context has value of 525600. The result will be:
 
 ```
- hugo --i18n-warnings | grep i18n
-i18n|MISSING_TRANSLATION|en|wordCount
+525600 minutes to read
 ```
+
+If `.ReadingTime.Count` in the context has value is 1. The result is:
+
+```
+One minute to read
+```
+
+In case you need to pass custom data: (`(dict "Count" 25)` is minimum requirement)
+
+```
+{{ i18n "readingTime" (dict "Count" 25 "FirstArgument" true "SecondArgument" false "Etc" "so on, so far") }}
+```
+
 
 ## Customize Dates
 
-At the time of this writing, Go does not yet have support for internationalized locales, but if you do some work, you can simulate it. For example, if you want to use French month names, you can add a data file like ``data/mois.yaml`` with this content:
+At the time of this writing, Go does not yet have support for internationalized locales for dates, but if you do some work, you can simulate it. For example, if you want to use French month names, you can add a data file like ``data/mois.yaml`` with this content:
 
 ~~~yaml
 1: "janvier"
@@ -375,21 +418,22 @@ At the time of this writing, Go does not yet have support for internationalized 
 12: "décembre"
 ~~~
 
-... then index the non-English date names in your templates like so:
+...then index the non-English date names in your templates like so:
 
 ~~~html
-<time class="post-date" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" | safeHTML }}">
+<time class="post-date" datetime="{{ .Date.Format `2006-01-02T15:04:05Z07:00` | safeHTML }}">
   Article publié le {{ .Date.Day }} {{ index $.Site.Data.mois (printf "%d" .Date.Month) }} {{ .Date.Year }} (dernière modification le {{ .Lastmod.Day }} {{ index $.Site.Data.mois (printf "%d" .Lastmod.Month) }} {{ .Lastmod.Year }})
 </time>
 ~~~
 
 This technique extracts the day, month and year by specifying ``.Date.Day``, ``.Date.Month``, and ``.Date.Year``, and uses the month number as a key, when indexing the month name data file.
 
+
 ## Menus
 
-You can define your menus for each language independently. The [creation of a menu][menus] works analogous to earlier versions of Hugo, except that they have to be defined in their language-specific block in the configuration file:
+You can define your menus for each language independently. Creating multilingual menus works just like [creating regular menus][menus], except they're defined in language-specific blocks in the configuration file:
 
-```
+{{< code-toggle file="config" >}}
 defaultContentLanguage = "en"
 
 [languages.en]
@@ -410,9 +454,9 @@ languageName = "Deutsch"
 url    = "/"
 name   = "Startseite"
 weight = 0
-```
+{{< /code-toggle >}}
 
-The rendering of the main navigation works as usual. `.Site.Menus` will just contain the menu of the current language. Pay attention to the generation of the menu links. `absLangURL` takes care that you link to the correct locale of your website. Otherwise, both menu entries would link to the English version as the default content language that resides in the root directory.
+The rendering of the main navigation works as usual. `.Site.Menus` will just contain the menu in the current language. Note that `absLangURL` below will link to the correct locale of your website. Without it, menu entries in all languages would link to the English version, since it's the default content language that resides in the root directory.
 
 ```
 <ul>
@@ -433,21 +477,26 @@ If a string does not have a translation for the current language, Hugo will use 
 While translating a Hugo website, it can be handy to have a visual indicator of missing translations. The [`enableMissingTranslationPlaceholders` configuration option][config] will flag all untranslated strings with the placeholder `[i18n] identifier`, where `identifier` is the id of the missing translation.
 
 {{% note %}}
-Hugo will generate your website with these missing translation placeholders. It might not be suited for production environments.
+Hugo will generate your website with these missing translation placeholders. It might not be suitable for production environments.
 {{% /note %}}
 
 For merging of content from other languages (i.e. missing content translations), see [lang.Merge](/functions/lang.merge/).
+
+To track down missing translation strings, run Hugo with the `--i18n-warnings` flag:
+
+```
+ hugo --i18n-warnings | grep i18n
+i18n|MISSING_TRANSLATION|en|wordCount
+```
 
 ## Multilingual Themes support
 
 To support Multilingual mode in your themes, some considerations must be taken for the URLs in the templates. If there is more than one language, URLs must meet the following criteria:
 
 * Come from the built-in `.Permalink` or `.RelPermalink`
-* Be constructed with
-    * The [`relLangURL` template function][rellangurl] or the [`absLangURL` template function][abslangurl] **OR**
-    * Prefixed with `{{ .LanguagePrefix }}`
+* Be constructed with the [`relLangURL` template function][rellangurl] or the [`absLangURL` template function][abslangurl] **OR** be prefixed with `{{ .LanguagePrefix }}`
 
-If there is more than one language defined, the `LanguagePrefix` variable will equal `/en` (or whatever your `CurrentLanguage` is). If not enabled, it will be an empty string and is therefore harmless for single-language Hugo websites.
+If there is more than one language defined, the `LanguagePrefix` variable will equal `/en` (or whatever your `CurrentLanguage` is). If not enabled, it will be an empty string (and is therefore harmless for single-language Hugo websites).
 
 [abslangurl]: /functions/abslangurl
 [config]: /getting-started/configuration/

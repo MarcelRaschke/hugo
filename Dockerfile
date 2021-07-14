@@ -2,25 +2,44 @@
 # Twitter:      https://twitter.com/gohugoio
 # Website:      https://gohugo.io/
 
-FROM golang:1.11-alpine3.7 AS build
+FROM golang:1.16-alpine AS build
 
-ENV CGO_ENABLED=0
+# Optionally set HUGO_BUILD_TAGS to "extended" or "nodeploy" when building like so:
+#   docker build --build-arg HUGO_BUILD_TAGS=extended .
+ARG HUGO_BUILD_TAGS
+
+ARG CGO=1
+ENV CGO_ENABLED=${CGO}
 ENV GOOS=linux
 ENV GO111MODULE=on
 
 WORKDIR /go/src/github.com/gohugoio/hugo
-RUN apk add --no-cache \
-    git \
-    musl-dev
+
 COPY . /go/src/github.com/gohugoio/hugo/
-RUN go install -ldflags '-s -w'
+
+# gcc/g++ are required to build SASS libraries for extended version
+RUN apk update && \
+    apk add --no-cache gcc g++ musl-dev && \
+    go get github.com/magefile/mage
+
+RUN mage hugo && mage install
 
 # ---
 
-FROM scratch
-COPY --from=build /go/bin/hugo /hugo
+FROM alpine:3.12
+
+COPY --from=build /go/bin/hugo /usr/bin/hugo
+
+# libc6-compat & libstdc++ are required for extended SASS libraries
+# ca-certificates are required to fetch outside resources (like Twitter oEmbeds)
+RUN apk update && \
+    apk add --no-cache ca-certificates libc6-compat libstdc++ git
+
+VOLUME /site
 WORKDIR /site
-VOLUME  /site
-EXPOSE  1313
-ENTRYPOINT [ "/hugo" ]
-CMD [ "--help" ]
+
+# Expose port for live server
+EXPOSE 1313
+
+ENTRYPOINT ["hugo"]
+CMD ["--help"]

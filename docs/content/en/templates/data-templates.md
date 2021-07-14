@@ -42,7 +42,7 @@ This is best explained with an example:
 
 ## Example: Jaco Pastorius' Solo Discography
 
-[Jaco Pastorius](http://en.wikipedia.org/wiki/Jaco_Pastorius_discography) was a great bass player, but his solo discography is short enough to use as an example. [John Patitucci](http://en.wikipedia.org/wiki/John_Patitucci) is another bass giant.
+[Jaco Pastorius](https://en.wikipedia.org/wiki/Jaco_Pastorius_discography) was a great bass player, but his solo discography is short enough to use as an example. [John Patitucci](https://en.wikipedia.org/wiki/John_Patitucci) is another bass giant.
 
 The example below is a bit contrived, but it illustrates the flexibility of data Files. This example uses TOML as its file format with the two following data files:
 
@@ -51,7 +51,7 @@ The example below is a bit contrived, but it illustrates the flexibility of data
 
 `jacopastorius.toml` contains the content below. `johnpatitucci.toml` contains a similar list:
 
-```
+{{< code-toggle file="jacopastorius" >}}
 discography = [
 "1974 – Modern American Music … Period! The Criteria Sessions",
 "1974 – Jaco",
@@ -69,7 +69,7 @@ discography = [
 "2003 - Punk Jazz: The Jaco Pastorius Anthology (compilation)",
 "2007 - The Essential Jaco Pastorius (compilation)"
 ]
-```
+{{< /code-toggle >}}
 
 The list of bass players can be accessed via `.Site.Data.jazz.bass`, a single bass player by adding the filename without the suffix, e.g. `.Site.Data.jazz.bass.jacopastorius`.
 
@@ -114,19 +114,10 @@ You can use the following code to render the `Short Description` in your layout:
 
 Note the use of the [`markdownify` template function][markdownify]. This will send the description through the Blackfriday Markdown rendering engine.
 
-<!-- begin "Data-drive Content" page -->
 
-## Data-Driven Content
+## Get Remote Data
 
-In addition to the [data files](/extras/datafiles/) feature, Hugo also has a "data-driven content" feature, which lets you load any [JSON](http://www.json.org/) or [CSV](http://en.wikipedia.org/wiki/Comma-separated_values) file from nearly any resource.
-
-Data-driven content currently consists of two functions, `getJSON` and `getCSV`, which are available in all template files.
-
-## Implementation details
-
-### Call the Functions with a URL
-
-In your template, call the functions like this:
+Use `getJSON` or `getCSV` to get remote data:
 
 ```
 {{ $dataJ := getJSON "url" }}
@@ -155,19 +146,18 @@ This will resolve internally to the following:
 {{ $gistJ := getJSON "https://api.github.com/users/GITHUB_USERNAME/gists" }}
 ```
 
-Finally, you can range over an array. This example will output the
-first 5 gists for a GitHub user:
+### Add HTTP headers
+
+{{< new-in "0.84.0" >}} Both `getJSON` and `getCSV` takes an optional map as the last argument, e.g.:
 
 ```
-<ul>
-  {{ $urlPre := "https://api.github.com" }}
-  {{ $gistJ := getJSON $urlPre "/users/GITHUB_USERNAME/gists" }}
-  {{ range first 5 $gistJ }}
-    {{ if .public }}
-      <li><a href="{{ .html_url }}" target="_blank">{{ .description }}</a></li>
-    {{ end }}
-  {{ end }}
-</ul>
+{{ $data := getJSON "https://example.org/api" (dict "Authorization" "Bearer abcd")  }}
+```
+
+If you need multiple values for the same header key, use a slice:
+
+```
+{{ $data := getJSON "https://example.org/api" (dict "X-List" (slice "a" "b" "c"))  }}
 ```
 
 ### Example for CSV files
@@ -184,7 +174,7 @@ For `getCSV`, the one-character-long separator must be placed in the first posit
       </tr>
     </thead>
     <tbody>
-    {{ $url := "http://a-big-corp.com/finance/employee-salaries.csv" }}
+    {{ $url := "https://example.com/finance/employee-salaries.csv" }}
     {{ $sep := "," }}
     {{ range $i, $r := getCSV $sep $url }}
       <tr>
@@ -217,7 +207,7 @@ Currently, you can only use those authentication methods that can be put into an
 
 To load local files with `getJSON` and `getCSV`, the source files must reside within Hugo's working directory. The file extension does not matter, but the content does.
 
-It applies the same output logic as above in [Calling the Functions with a URL](#calling-the-functions-with-a-url).
+It applies the same output logic as above in [Call the Functions with a URL](#call-the-functions-with-a-url).
 
 {{% note %}}
 The local CSV files to be loaded using `getCSV` must be located **outside** of the `data` directory.
@@ -250,10 +240,10 @@ If you change any local file and the LiveReload is triggered, Hugo will read the
 [LiveReload]: /getting-started/usage/#livereload
 [lookup]: /templates/lookup-order/
 [markdownify]: /functions/markdownify/
-[OAuth]: http://en.wikipedia.org/wiki/OAuth
+[OAuth]: https://en.wikipedia.org/wiki/OAuth
 [partials]: /templates/partials/
 [themes]: /themes/
 [toml]: https://github.com/toml-lang/toml
-[variadic]: http://en.wikipedia.org/wiki/Variadic_function
+[variadic]: https://en.wikipedia.org/wiki/Variadic_function
 [vars]: /variables/
-[yaml]: http://yaml.org/spec/
+[yaml]: https://yaml.org/spec/

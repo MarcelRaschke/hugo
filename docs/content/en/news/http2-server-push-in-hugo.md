@@ -12,7 +12,7 @@ images:
 - images/gohugoio-card-1.png
 ---
 
-**Netlify** recently announced support for [HTTP/2 server push](https://www.netlify.com/blog/2017/07/18/http/2-server-push-on-netlify/), and we have now added it to the **gohugo.io** sites for the main `CSS` and `JS` bundles, along with server-side 301 redirect support. 
+**Netlify** recently announced support for [HTTP/2 server push](https://www.netlify.com/blog/2017/07/18/http/2-server-push-on-netlify/), and we have now added it to the **gohugo.io** sites for the main `CSS` and `JS` bundles, along with server-side 301 redirect support.
 
 If you navigate to https://gohugo.io and look in the Chrome developer network console, you should now see `Push` as the new source ("Initiator") for the `CSS` and `JSS`:
 
@@ -23,7 +23,8 @@ If you navigate to https://gohugo.io and look in the Chrome developer network co
 ## 1. Configure Netlify Output Formats
 
 Add a new custom media type and two new output formats to `config.toml`. For more on output formats in Hugo, see [Custom Output Formats](/templates/output-formats/).
-```bash
+
+```toml
 [outputs]
 home = [ "HTML", "RSS", "REDIR", "HEADERS" ]
 
@@ -44,7 +45,7 @@ baseName = "_headers"
 isPlainText = true
 notAlternative = true
 ```
-## 2. Add Template For the _headers File 
+## 2. Add Template For the _headers File
 
 Add `layouts/index.headers`:
 
@@ -63,9 +64,7 @@ The template above creates both a security header definition and a HTTP/2 server
 Also note that this is a template for the home page, so the full `Page` with its `Site` and many variables are available. You can also use `partial` to include other templates.
 
 
-
-
-## 3. Add Template For the _redirects File 
+## 3. Add Template For the _redirects File
 Add `layouts/index.redir`:
 ```bash
 # Netlify redirects. See https://www.netlify.com/docs/redirects/

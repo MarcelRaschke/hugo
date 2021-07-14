@@ -1,4 +1,4 @@
-// Copyright 2018 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/spf13/cast"
+
+	"github.com/gohugoio/hugo/resources/page"
+
+	qt "github.com/frankban/quicktest"
 )
 
 /*
@@ -40,7 +44,7 @@ import (
 
 func TestLanguageContentRoot(t *testing.T) {
 	t.Parallel()
-	assert := require.New(t)
+	c := qt.New(t)
 
 	config := `
 baseURL = "https://example.org/"
@@ -98,16 +102,19 @@ Content.
 	var contentFiles []string
 	section := "sect"
 
-	var contentRoot = func(lang string) string {
-		contentRoot := "content/main"
-
+	contentRoot := func(lang string) string {
 		switch lang {
 		case "nn":
-			contentRoot = "content/norsk"
+			return "content/norsk"
 		case "sv":
-			contentRoot = "content/svensk"
+			return "content/svensk"
+		default:
+			return "content/main"
 		}
-		return contentRoot + "/" + section
+	}
+
+	contentSectionRoot := func(lang string) string {
+		return contentRoot(lang) + "/" + section
 	}
 
 	for _, lang := range []string{"en", "nn", "sv"} {
@@ -124,7 +131,7 @@ Content.
 			}
 
 			base := fmt.Sprintf("p-%s-%d", lang, j)
-			slug := fmt.Sprintf("%s", base)
+			slug := base
 			langID := ""
 
 			if lang == "sv" && j%4 == 0 {
@@ -139,7 +146,7 @@ Content.
 
 			slug += langID
 
-			contentRoot := contentRoot(lang)
+			contentRoot := contentSectionRoot(lang)
 
 			filename := filepath.Join(contentRoot, fmt.Sprintf("page%d%s.md", j, langID))
 			contentFiles = append(contentFiles, filename, fmt.Sprintf(pageTemplate, slug, slug, j))
@@ -148,7 +155,7 @@ Content.
 
 	// Put common translations in all of them
 	for i, lang := range []string{"en", "nn", "sv"} {
-		contentRoot := contentRoot(lang)
+		contentRoot := contentSectionRoot(lang)
 
 		slug := fmt.Sprintf("common_%s", lang)
 
@@ -173,7 +180,7 @@ Content.
 
 	// Add a bundle with some images
 	for i, lang := range []string{"en", "nn", "sv"} {
-		contentRoot := contentRoot(lang)
+		contentRoot := contentSectionRoot(lang)
 		slug := fmt.Sprintf("bundle_%s", lang)
 		filename := filepath.Join(contentRoot, "mybundle", "index.md")
 		contentFiles = append(contentFiles, filename, fmt.Sprintf(pageBundleTemplate, slug, 400+i))
@@ -190,40 +197,58 @@ Content.
 
 	}
 
+	// Add some static files inside the content dir
+	// https://github.com/gohugoio/hugo/issues/5759
+	for _, lang := range []string{"en", "nn", "sv"} {
+		contentRoot := contentRoot(lang)
+		for i := 0; i < 2; i++ {
+			filename := filepath.Join(contentRoot, "mystatic", fmt.Sprintf("file%d.yaml", i))
+			contentFiles = append(contentFiles, filename, lang)
+		}
+	}
+
 	b := newTestSitesBuilder(t)
 	b.WithWorkingDir("/my/project").WithConfigFile("toml", config).WithContent(contentFiles...).CreateSites()
 
 	_ = os.Stdout
-	//printFs(b.H.BaseFs.ContentFs, "/", os.Stdout)
 
-	b.Build(BuildCfg{})
+	err := b.BuildE(BuildCfg{})
 
-	assert.Equal(3, len(b.H.Sites))
+	// dumpPages(b.H.Sites[1].RegularPages()...)
+
+	c.Assert(err, qt.IsNil)
+
+	c.Assert(len(b.H.Sites), qt.Equals, 3)
 
 	enSite := b.H.Sites[0]
 	nnSite := b.H.Sites[1]
 	svSite := b.H.Sites[2]
 
-	//dumpPages(nnSite.RegularPages...)
-	assert.Equal(12, len(nnSite.RegularPages))
-	assert.Equal(13, len(enSite.RegularPages))
+	b.AssertFileContent("/my/project/public/en/mystatic/file1.yaml", "en")
+	b.AssertFileContent("/my/project/public/nn/mystatic/file1.yaml", "nn")
 
-	assert.Equal(10, len(svSite.RegularPages))
+	// dumpPages(nnSite.RegularPages()...)
+
+	c.Assert(len(nnSite.RegularPages()), qt.Equals, 12)
+	c.Assert(len(enSite.RegularPages()), qt.Equals, 13)
+
+	c.Assert(len(svSite.RegularPages()), qt.Equals, 10)
 
 	svP2, err := svSite.getPageNew(nil, "/sect/page2.md")
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 	nnP2, err := nnSite.getPageNew(nil, "/sect/page2.md")
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
 	enP2, err := enSite.getPageNew(nil, "/sect/page2.md")
-	assert.NoError(err)
-	assert.Equal("en", enP2.Lang())
-	assert.Equal("sv", svP2.Lang())
-	assert.Equal("nn", nnP2.Lang())
+	c.Assert(err, qt.IsNil)
+	c.Assert(enP2.Language().Lang, qt.Equals, "en")
+	c.Assert(svP2.Language().Lang, qt.Equals, "sv")
+	c.Assert(nnP2.Language().Lang, qt.Equals, "nn")
 
 	content, _ := nnP2.Content()
-	assert.Contains(content, "SVP3-REF: https://example.org/sv/sect/p-sv-3/")
-	assert.Contains(content, "SVP3-RELREF: /sv/sect/p-sv-3/")
+	contentStr := cast.ToString(content)
+	c.Assert(contentStr, qt.Contains, "SVP3-REF: https://example.org/sv/sect/p-sv-3/")
+	c.Assert(contentStr, qt.Contains, "SVP3-RELREF: /sv/sect/p-sv-3/")
 
 	// Test RelRef with and without language indicator.
 	nn3RefArgs := map[string]interface{}{
@@ -233,43 +258,51 @@ Content.
 	nnP3RelRef, err := svP2.RelRef(
 		nn3RefArgs,
 	)
-	assert.NoError(err)
-	assert.Equal("/nn/sect/p-nn-3/", nnP3RelRef)
+	c.Assert(err, qt.IsNil)
+	c.Assert(nnP3RelRef, qt.Equals, "/nn/sect/p-nn-3/")
 	nnP3Ref, err := svP2.Ref(
 		nn3RefArgs,
 	)
-	assert.NoError(err)
-	assert.Equal("https://example.org/nn/sect/p-nn-3/", nnP3Ref)
+	c.Assert(err, qt.IsNil)
+	c.Assert(nnP3Ref, qt.Equals, "https://example.org/nn/sect/p-nn-3/")
 
-	for i, p := range enSite.RegularPages {
+	for i, p := range enSite.RegularPages() {
 		j := i + 1
-		msg := fmt.Sprintf("Test %d", j)
-		assert.Equal("en", p.Lang(), msg)
-		assert.Equal("sect", p.Section())
+		c.Assert(p.Language().Lang, qt.Equals, "en")
+		c.Assert(p.Section(), qt.Equals, "sect")
 		if j < 9 {
 			if j%4 == 0 {
-				assert.Contains(p.Title(), fmt.Sprintf("p-sv-%d.en", i+1), msg)
 			} else {
-				assert.Contains(p.Title(), "p-en", msg)
+				c.Assert(p.Title(), qt.Contains, "p-en")
 			}
 		}
 	}
 
+	for _, p := range nnSite.RegularPages() {
+		c.Assert(p.Language().Lang, qt.Equals, "nn")
+		c.Assert(p.Title(), qt.Contains, "nn")
+	}
+
+	for _, p := range svSite.RegularPages() {
+		c.Assert(p.Language().Lang, qt.Equals, "sv")
+		c.Assert(p.Title(), qt.Contains, "sv")
+	}
+
 	// Check bundles
-	bundleEn := enSite.RegularPages[len(enSite.RegularPages)-1]
-	bundleNn := nnSite.RegularPages[len(nnSite.RegularPages)-1]
-	bundleSv := svSite.RegularPages[len(svSite.RegularPages)-1]
+	bundleEn := enSite.RegularPages()[len(enSite.RegularPages())-1]
+	bundleNn := nnSite.RegularPages()[len(nnSite.RegularPages())-1]
+	bundleSv := svSite.RegularPages()[len(svSite.RegularPages())-1]
 
-	assert.Equal("/en/sect/mybundle/", bundleEn.RelPermalink())
-	assert.Equal("/sv/sect/mybundle/", bundleSv.RelPermalink())
+	c.Assert(bundleEn.RelPermalink(), qt.Equals, "/en/sect/mybundle/")
+	c.Assert(bundleSv.RelPermalink(), qt.Equals, "/sv/sect/mybundle/")
 
-	assert.Equal(4, len(bundleEn.Resources))
-	assert.Equal(4, len(bundleNn.Resources))
-	assert.Equal(4, len(bundleSv.Resources))
+	c.Assert(len(bundleNn.Resources()), qt.Equals, 4)
+	c.Assert(len(bundleSv.Resources()), qt.Equals, 4)
+	c.Assert(len(bundleEn.Resources()), qt.Equals, 4)
 
-	assert.Equal("/en/sect/mybundle/logo.png", bundleEn.Resources.GetMatch("logo*").RelPermalink())
-	assert.Equal("/nn/sect/mybundle/logo.png", bundleNn.Resources.GetMatch("logo*").RelPermalink())
-	assert.Equal("/sv/sect/mybundle/logo.png", bundleSv.Resources.GetMatch("logo*").RelPermalink())
+	b.AssertFileContent("/my/project/public/en/sect/mybundle/index.html", "image/png: /en/sect/mybundle/logo.png")
+	b.AssertFileContent("/my/project/public/nn/sect/mybundle/index.html", "image/png: /nn/sect/mybundle/logo.png")
+	b.AssertFileContent("/my/project/public/sv/sect/mybundle/index.html", "image/png: /sv/sect/mybundle/logo.png")
 
 	b.AssertFileContent("/my/project/public/sv/sect/mybundle/featured.png", "PNG Data for sv")
 	b.AssertFileContent("/my/project/public/nn/sect/mybundle/featured.png", "PNG Data for nn")
@@ -278,10 +311,95 @@ Content.
 	b.AssertFileContent("/my/project/public/sv/sect/mybundle/logo.png", "PNG Data")
 	b.AssertFileContent("/my/project/public/nn/sect/mybundle/logo.png", "PNG Data")
 
-	nnSect := nnSite.getPage(KindSection, "sect")
-	assert.NotNil(nnSect)
-	assert.Equal(12, len(nnSect.Pages))
+	nnSect := nnSite.getPage(page.KindSection, "sect")
+	c.Assert(nnSect, qt.Not(qt.IsNil))
+	c.Assert(len(nnSect.Pages()), qt.Equals, 12)
 	nnHome, _ := nnSite.Info.Home()
-	assert.Equal("/nn/", nnHome.RelPermalink())
+	c.Assert(nnHome.RelPermalink(), qt.Equals, "/nn/")
+}
 
+// https://github.com/gohugoio/hugo/issues/6463
+func TestLanguageRootSectionsMismatch(t *testing.T) {
+	t.Parallel()
+
+	config := `
+baseURL: "https://example.org/"
+languageCode: "en-us"
+title: "My New Hugo Site"
+theme: "mytheme"
+
+contentDir: "content/en"
+
+languages:
+    en:
+        weight: 1
+        languageName: "English"
+        contentDir: content/en
+    es:
+        weight: 2
+        languageName: "Español"
+        contentDir: content/es
+    fr:
+        weight: 4
+        languageName: "Française"
+        contentDir: content/fr
+
+        
+`
+	createPage := func(title string) string {
+		return fmt.Sprintf(`---
+title: %q
+---
+
+`, title)
+	}
+
+	b := newTestSitesBuilder(t)
+	b.WithConfigFile("yaml", config)
+
+	b.WithSourceFile("themes/mytheme/layouts/index.html", `MYTHEME`)
+	b.WithTemplates("index.html", `
+Lang: {{ .Lang }}
+{{ range .Site.RegularPages }}
+Page: {{ .RelPermalink }}|{{ .Title -}}
+{{ end }}
+
+`)
+	b.WithSourceFile("static/hello.txt", `hello`)
+	b.WithContent("en/_index.md", createPage("en home"))
+	b.WithContent("es/_index.md", createPage("es home"))
+	b.WithContent("fr/_index.md", createPage("fr home"))
+
+	for i := 1; i < 3; i++ {
+		b.WithContent(fmt.Sprintf("en/event/page%d.md", i), createPage(fmt.Sprintf("ev-en%d", i)))
+		b.WithContent(fmt.Sprintf("es/event/page%d.md", i), createPage(fmt.Sprintf("ev-es%d", i)))
+		b.WithContent(fmt.Sprintf("fr/event/page%d.md", i), createPage(fmt.Sprintf("ev-fr%d", i)))
+		b.WithContent(fmt.Sprintf("en/blog/page%d.md", i), createPage(fmt.Sprintf("blog-en%d", i)))
+		b.WithContent(fmt.Sprintf("es/blog/page%d.md", i), createPage(fmt.Sprintf("blog-es%d", i)))
+		b.WithContent(fmt.Sprintf("fr/other/page%d.md", i), createPage(fmt.Sprintf("other-fr%d", i)))
+	}
+
+	b.Build(BuildCfg{})
+
+	b.AssertFileContent("public/index.html", `
+Lang: en
+Page: /blog/page1/|blog-en1
+Page: /blog/page2/|blog-en2
+Page: /event/page1/|ev-en1
+Page: /event/page2/|ev-en2
+`)
+
+	b.AssertFileContent("public/es/index.html", `
+Lang: es
+Page: /es/blog/page1/|blog-es1
+Page: /es/blog/page2/|blog-es2
+Page: /es/event/page1/|ev-es1
+Page: /es/event/page2/|ev-es2
+`)
+	b.AssertFileContent("public/fr/index.html", `
+Lang: fr
+Page: /fr/event/page1/|ev-fr1
+Page: /fr/event/page2/|ev-fr2
+Page: /fr/other/page1/|other-fr1
+Page: /fr/other/page2/|other-fr2`)
 }

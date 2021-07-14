@@ -1,4 +1,4 @@
-// Copyright 2017-present The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 type testDoc struct {
 	keywords map[string][]Keyword
 	date     time.Time
+	name     string
 }
 
 func (d *testDoc) String() string {
@@ -39,11 +40,19 @@ func (d *testDoc) String() string {
 	return s
 }
 
+func (d *testDoc) Name() string {
+	return d.name
+}
+
 func newTestDoc(name string, keywords ...string) *testDoc {
+	time.Sleep(1 * time.Millisecond)
+	return newTestDocWithDate(name, time.Now(), keywords...)
+}
+
+func newTestDocWithDate(name string, date time.Time, keywords ...string) *testDoc {
 	km := make(map[string][]Keyword)
 
-	time.Sleep(1 * time.Millisecond)
-	kw := &testDoc{keywords: km, date: time.Now()}
+	kw := &testDoc{keywords: km, date: date}
 
 	kw.addKeywords(name, keywords...)
 	return kw
@@ -68,16 +77,15 @@ func createTestKeywords(name string, keywords ...string) map[string][]string {
 	}
 }
 
-func (d *testDoc) SearchKeywords(cfg IndexConfig) ([]Keyword, error) {
+func (d *testDoc) RelatedKeywords(cfg IndexConfig) ([]Keyword, error) {
 	return d.keywords[cfg.Name], nil
 }
 
-func (d *testDoc) PubDate() time.Time {
+func (d *testDoc) PublishDate() time.Time {
 	return d.date
 }
 
 func TestSearch(t *testing.T) {
-
 	config := Config{
 		Threshold:    90,
 		IncludeNewer: false,
@@ -88,7 +96,7 @@ func TestSearch(t *testing.T) {
 	}
 
 	idx := NewInvertedIndex(config)
-	//idx.debug = true
+	// idx.debug = true
 
 	docs := []Document{
 		newTestDoc("tags", "a", "b", "c", "d"),
@@ -100,77 +108,111 @@ func TestSearch(t *testing.T) {
 	idx.Add(docs...)
 
 	t.Run("count", func(t *testing.T) {
-		assert := require.New(t)
-		assert.Len(idx.index, 2)
+		c := qt.New(t)
+		c.Assert(len(idx.index), qt.Equals, 2)
 		set1, found := idx.index["tags"]
-		assert.True(found)
+		c.Assert(found, qt.Equals, true)
 		// 6 tags
-		assert.Len(set1, 6)
+		c.Assert(len(set1), qt.Equals, 6)
 
 		set2, found := idx.index["keywords"]
-		assert.True(found)
-		assert.Len(set2, 2)
-
+		c.Assert(found, qt.Equals, true)
+		c.Assert(len(set2), qt.Equals, 2)
 	})
 
 	t.Run("search-tags", func(t *testing.T) {
-		assert := require.New(t)
+		c := qt.New(t)
 		m, err := idx.search(newQueryElement("tags", StringsToKeywords("a", "b", "d", "z")...))
-		assert.NoError(err)
-		assert.Len(m, 2)
-		assert.Equal(docs[0], m[0])
-		assert.Equal(docs[1], m[1])
+		c.Assert(err, qt.IsNil)
+		c.Assert(len(m), qt.Equals, 2)
+		c.Assert(m[0], qt.Equals, docs[0])
+		c.Assert(m[1], qt.Equals, docs[1])
 	})
 
 	t.Run("search-tags-and-keywords", func(t *testing.T) {
-		assert := require.New(t)
+		c := qt.New(t)
 		m, err := idx.search(
 			newQueryElement("tags", StringsToKeywords("a", "b", "z")...),
 			newQueryElement("keywords", StringsToKeywords("a", "b")...))
-		assert.NoError(err)
-		assert.Len(m, 3)
-		assert.Equal(docs[3], m[0])
-		assert.Equal(docs[2], m[1])
-		assert.Equal(docs[0], m[2])
+		c.Assert(err, qt.IsNil)
+		c.Assert(len(m), qt.Equals, 3)
+		c.Assert(m[0], qt.Equals, docs[3])
+		c.Assert(m[1], qt.Equals, docs[2])
+		c.Assert(m[2], qt.Equals, docs[0])
 	})
 
 	t.Run("searchdoc-all", func(t *testing.T) {
-		assert := require.New(t)
+		c := qt.New(t)
 		doc := newTestDoc("tags", "a").addKeywords("keywords", "a")
 		m, err := idx.SearchDoc(doc)
-		assert.NoError(err)
-		assert.Len(m, 2)
-		assert.Equal(docs[3], m[0])
-		assert.Equal(docs[2], m[1])
+		c.Assert(err, qt.IsNil)
+		c.Assert(len(m), qt.Equals, 2)
+		c.Assert(m[0], qt.Equals, docs[3])
+		c.Assert(m[1], qt.Equals, docs[2])
 	})
 
 	t.Run("searchdoc-tags", func(t *testing.T) {
-		assert := require.New(t)
+		c := qt.New(t)
 		doc := newTestDoc("tags", "a", "b", "d", "z").addKeywords("keywords", "a", "b")
 		m, err := idx.SearchDoc(doc, "tags")
-		assert.NoError(err)
-		assert.Len(m, 2)
-		assert.Equal(docs[0], m[0])
-		assert.Equal(docs[1], m[1])
+		c.Assert(err, qt.IsNil)
+		c.Assert(len(m), qt.Equals, 2)
+		c.Assert(m[0], qt.Equals, docs[0])
+		c.Assert(m[1], qt.Equals, docs[1])
 	})
 
 	t.Run("searchdoc-keywords-date", func(t *testing.T) {
-		assert := require.New(t)
+		c := qt.New(t)
 		doc := newTestDoc("tags", "a", "b", "d", "z").addKeywords("keywords", "a", "b")
 		// This will get a date newer than the others.
 		newDoc := newTestDoc("keywords", "a", "b")
 		idx.Add(newDoc)
 
 		m, err := idx.SearchDoc(doc, "keywords")
-		assert.NoError(err)
-		assert.Len(m, 2)
-		assert.Equal(docs[3], m[0])
+		c.Assert(err, qt.IsNil)
+		c.Assert(len(m), qt.Equals, 2)
+		c.Assert(m[0], qt.Equals, docs[3])
 	})
 
+	t.Run("searchdoc-keywords-same-date", func(t *testing.T) {
+		c := qt.New(t)
+		idx := NewInvertedIndex(config)
+
+		date := time.Now()
+
+		doc := newTestDocWithDate("keywords", date, "a", "b")
+		doc.name = "thedoc"
+
+		for i := 0; i < 10; i++ {
+			docc := *doc
+			docc.name = fmt.Sprintf("doc%d", i)
+			idx.Add(&docc)
+		}
+
+		m, err := idx.SearchDoc(doc, "keywords")
+		c.Assert(err, qt.IsNil)
+		c.Assert(len(m), qt.Equals, 10)
+		for i := 0; i < 10; i++ {
+			c.Assert(m[i].Name(), qt.Equals, fmt.Sprintf("doc%d", i))
+		}
+	})
+}
+
+func TestToKeywordsToLower(t *testing.T) {
+	c := qt.New(t)
+	slice := []string{"A", "B", "C"}
+	config := IndexConfig{ToLower: true}
+	keywords, err := config.ToKeywords(slice)
+	c.Assert(err, qt.IsNil)
+	c.Assert(slice, qt.DeepEquals, []string{"A", "B", "C"})
+	c.Assert(keywords, qt.DeepEquals, []Keyword{
+		StringKeyword("a"),
+		StringKeyword("b"),
+		StringKeyword("c"),
+	})
 }
 
 func BenchmarkRelatedNewIndex(b *testing.B) {
-
 	pages := make([]*testDoc, 100)
 	numkeywords := 30
 	allKeywords := make([]string, numkeywords)
@@ -225,11 +267,9 @@ func BenchmarkRelatedNewIndex(b *testing.B) {
 			idx.Add(docs...)
 		}
 	})
-
 }
 
 func BenchmarkRelatedMatchesIn(b *testing.B) {
-
 	q1 := newQueryElement("tags", StringsToKeywords("keyword2", "keyword5", "keyword32", "asdf")...)
 	q2 := newQueryElement("keywords", StringsToKeywords("keyword3", "keyword4")...)
 

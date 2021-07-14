@@ -111,7 +111,25 @@ The following order is used to determine an Identifier:
 
 This means that `.Title` will be used unless `.LinkTitle` is present, etc. In practice, `.Name` and `.Identifier` are only used to structure relationships and therefore never displayed.
 
-In this example, the top level of the menu is defined in your [site `config` file][config]). All content entries are attached to one of these entries via the `.Parent` field.
+In this example, the top level of the menu is defined in your [site `config` file][config]. All content entries are attached to one of these entries via the `.Parent` field.
+
+## Params
+
+You can also add user-defined content to menu items via the `params` field. 
+
+A common use case is to define a custom param to add a css class to a specific menu item.
+
+{{< code-toggle file="config" >}}
+[[menu.main]]
+    name = "about hugo"
+    pre = "<i class='fa fa-heart'></i>"
+    weight = -110
+    identifier = "about"
+    url = "/about/"
+    [menu.main.params]
+      class = "highlight-menu-item"
+{{</ code-toggle >}}
+
 
 ## Render Menus
 

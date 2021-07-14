@@ -1,4 +1,4 @@
-// Copyright 2018 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestGroupFunc(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	pageContent := `
 ---
@@ -39,14 +39,14 @@ title: "Page"
 `)
 	b.CreateSites().Build(BuildCfg{})
 
-	assert.Equal(1, len(b.H.Sites))
-	require.Len(t, b.H.Sites[0].RegularPages, 2)
+	c.Assert(len(b.H.Sites), qt.Equals, 1)
+	c.Assert(len(b.H.Sites[0].RegularPages()), qt.Equals, 2)
 
 	b.AssertFileContent("public/index.html", "cool: 2")
 }
 
 func TestSliceFunc(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	pageContent := `
 ---
@@ -78,17 +78,93 @@ tags_weight: %d
 `)
 	b.CreateSites().Build(BuildCfg{})
 
-	assert.Equal(1, len(b.H.Sites))
-	require.Len(t, b.H.Sites[0].RegularPages, 2)
+	c.Assert(len(b.H.Sites), qt.Equals, 1)
+	c.Assert(len(b.H.Sites[0].RegularPages()), qt.Equals, 2)
 
 	b.AssertFileContent("public/index.html",
-		"pages:2:hugolib.Pages:Page(/page1.md)/Page(/page2.md)",
-		"pageGroups:2:hugolib.PagesGroup:Page(/page1.md)/Page(/page2.md)",
-		`weightedPages:2::hugolib.WeightedPages:[WeightedPage(10,"Page") WeightedPage(20,"Page")]`)
+		"pages:2:page.Pages:Page(/page1.md)/Page(/page2.md)",
+		"pageGroups:2:page.PagesGroup:Page(/page1.md)/Page(/page2.md)",
+		`weightedPages:2::page.WeightedPages:[WeightedPage(10,"Page") WeightedPage(20,"Page")]`)
+}
+
+func TestUnionFunc(t *testing.T) {
+	c := qt.New(t)
+
+	pageContent := `
+---
+title: "Page"
+tags: ["blue", "green"]
+tags_weight: %d
+---
+
+`
+	b := newTestSitesBuilder(t)
+	b.WithSimpleConfigFile().
+		WithContent("page1.md", fmt.Sprintf(pageContent, 10), "page2.md", fmt.Sprintf(pageContent, 20),
+			"page3.md", fmt.Sprintf(pageContent, 30)).
+		WithTemplatesAdded("index.html", `
+{{ $unionPages := first 2 .Site.RegularPages | union .Site.RegularPages  }}
+{{ $unionWeightedPages := .Site.Taxonomies.tags.blue | union .Site.Taxonomies.tags.green }}
+{{ printf "unionPages: %T %d" $unionPages (len $unionPages) }} 
+{{ printf "unionWeightedPages: %T %d" $unionWeightedPages (len $unionWeightedPages) }}
+`)
+	b.CreateSites().Build(BuildCfg{})
+
+	c.Assert(len(b.H.Sites), qt.Equals, 1)
+	c.Assert(len(b.H.Sites[0].RegularPages()), qt.Equals, 3)
+
+	b.AssertFileContent("public/index.html",
+		"unionPages: page.Pages 3",
+		"unionWeightedPages: page.WeightedPages 6")
+}
+
+func TestCollectionsFuncs(t *testing.T) {
+	c := qt.New(t)
+
+	pageContent := `
+---
+title: "Page %d"
+tags: ["blue", "green"]
+tags_weight: %d
+---
+
+`
+	b := newTestSitesBuilder(t)
+	b.WithSimpleConfigFile().
+		WithContent("page1.md", fmt.Sprintf(pageContent, 10, 10), "page2.md", fmt.Sprintf(pageContent, 20, 20),
+			"page3.md", fmt.Sprintf(pageContent, 30, 30)).
+		WithTemplatesAdded("index.html", `
+{{ $uniqPages := first 2 .Site.RegularPages | append .Site.RegularPages | uniq  }}
+{{ $inTrue := in .Site.RegularPages (index .Site.RegularPages 1)  }}
+{{ $inFalse := in .Site.RegularPages (.Site.Home)  }}
+
+{{ printf "uniqPages: %T %d" $uniqPages (len $uniqPages) }}
+{{ printf "inTrue: %t" $inTrue }}
+{{ printf "inFalse: %t" $inFalse  }}
+`)
+
+	b.WithTemplatesAdded("_default/single.html", `
+{{ $related := .Site.RegularPages.Related . }}
+{{ $symdiff := $related | symdiff .Site.RegularPages }}
+Related: {{ range $related }}{{ .RelPermalink }}|{{ end }}
+Symdiff: {{ range $symdiff }}{{ .RelPermalink }}|{{ end }}
+`)
+	b.CreateSites().Build(BuildCfg{})
+
+	c.Assert(len(b.H.Sites), qt.Equals, 1)
+	c.Assert(len(b.H.Sites[0].RegularPages()), qt.Equals, 3)
+
+	b.AssertFileContent("public/index.html",
+		"uniqPages: page.Pages 3",
+		"inTrue: true",
+		"inFalse: false",
+	)
+
+	b.AssertFileContent("public/page1/index.html", `Related: /page2/|/page3/|`, `Symdiff: /page1/|`)
 }
 
 func TestAppendFunc(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	pageContent := `
 ---
@@ -102,7 +178,6 @@ tags_weight: %d
 	b.WithSimpleConfigFile().
 		WithContent("page1.md", fmt.Sprintf(pageContent, 10), "page2.md", fmt.Sprintf(pageContent, 20)).
 		WithTemplatesAdded("index.html", `
-
 {{ $p1 := index .Site.RegularPages 0 }}{{ $p2 := index .Site.RegularPages 1 }}
 
 {{ $pages := slice }}
@@ -128,12 +203,12 @@ tags_weight: %d
 `)
 	b.CreateSites().Build(BuildCfg{})
 
-	assert.Equal(1, len(b.H.Sites))
-	require.Len(t, b.H.Sites[0].RegularPages, 2)
+	c.Assert(len(b.H.Sites), qt.Equals, 1)
+	c.Assert(len(b.H.Sites[0].RegularPages()), qt.Equals, 2)
 
 	b.AssertFileContent("public/index.html",
-		"pages:2:hugolib.Pages:Page(/page2.md)/Page(/page1.md)",
-		"appendPages:9:hugolib.Pages:home/page",
+		"pages:2:page.Pages:Page(/page2.md)/Page(/page1.md)",
+		"appendPages:9:page.Pages:home/page",
 		"appendStrings:[]string:[a b c d e]",
 		"appendStringsSlice:[]string:[a b c c d]",
 		"union:[]string:[a b c d e]",

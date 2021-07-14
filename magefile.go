@@ -15,16 +15,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohugoio/hugo/codegen"
+	"github.com/gohugoio/hugo/resources/page/page_generate"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
 
 const (
 	packageName  = "github.com/gohugoio/hugo"
-	noGitLdflags = "-X $PACKAGE/hugolib.BuildDate=$BUILD_DATE"
+	noGitLdflags = "-X $PACKAGE/common/hugo.buildDate=$BUILD_DATE"
 )
 
-var ldflags = "-X $PACKAGE/hugolib.CommitHash=$COMMIT_HASH -X $PACKAGE/hugolib.BuildDate=$BUILD_DATE"
+var ldflags = "-X $PACKAGE/common/hugo.commitHash=$COMMIT_HASH -X $PACKAGE/common/hugo.buildDate=$BUILD_DATE"
 
 // allow user to override go executable by running as GOEXE=xxx make ... on unix-like systems
 var goexe = "go"
@@ -39,19 +42,29 @@ func init() {
 	os.Setenv("GO111MODULE", "on")
 }
 
+func runWith(env map[string]string, cmd string, inArgs ...interface{}) error {
+	s := argsToStrings(inArgs...)
+	return sh.RunWith(env, cmd, s...)
+}
+
 // Build hugo binary
 func Hugo() error {
-	return sh.RunWith(flagEnv(), goexe, "build", "-ldflags", ldflags, "-tags", buildTags(), packageName)
+	return runWith(flagEnv(), goexe, "build", "-ldflags", ldflags, buildFlags(), "-tags", buildTags(), packageName)
 }
 
 // Build hugo binary with race detector enabled
 func HugoRace() error {
-	return sh.RunWith(flagEnv(), goexe, "build", "-race", "-ldflags", ldflags, "-tags", buildTags(), packageName)
+	return runWith(flagEnv(), goexe, "build", "-race", "-ldflags", ldflags, buildFlags(), "-tags", buildTags(), packageName)
 }
 
 // Install hugo binary
 func Install() error {
-	return sh.RunWith(flagEnv(), goexe, "install", "-ldflags", ldflags, "-tags", buildTags(), packageName)
+	return runWith(flagEnv(), goexe, "install", "-ldflags", ldflags, buildFlags(), "-tags", buildTags(), packageName)
+}
+
+// Uninstall hugo binary
+func Uninstall() error {
+	return sh.Run(goexe, "clean", "-i", packageName)
 }
 
 func flagEnv() map[string]string {
@@ -63,8 +76,45 @@ func flagEnv() map[string]string {
 	}
 }
 
+// Generate autogen packages
 func Generate() error {
-	return sh.RunWith(flagEnv(), goexe, "generate", path.Join(packageName, "tpl/tplimpl/embedded/generate"))
+	generatorPackages := []string{
+		"tpl/tplimpl/embedded/generate",
+		//"resources/page/generate",
+	}
+
+	for _, pkg := range generatorPackages {
+		if err := runWith(flagEnv(), goexe, "generate", path.Join(packageName, pkg)); err != nil {
+			return err
+		}
+	}
+
+	dir, _ := os.Getwd()
+	c := codegen.NewInspector(dir)
+
+	if err := page_generate.Generate(c); err != nil {
+		return err
+	}
+
+	goFmtPatterns := []string{
+		// TODO(bep) check: stat ./resources/page/*autogen*: no such file or directory
+		"./resources/page/page_marshaljson.autogen.go",
+		"./resources/page/page_wrappers.autogen.go",
+		"./resources/page/zero_file.autogen.go",
+	}
+
+	for _, pattern := range goFmtPatterns {
+		if err := sh.Run("gofmt", "-w", filepath.FromSlash(pattern)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Generate docs helper
+func GenDocsHelper() error {
+	return runCmd(flagEnv(), goexe, "run", "-tags", buildTags(), "main.go", "gen", "docshelper")
 }
 
 // Build hugo without git info
@@ -100,7 +150,11 @@ func Check() {
 		return
 	}
 
-	mg.Deps(Test386)
+	if runtime.GOARCH == "amd64" && runtime.GOOS != "darwin" {
+		mg.Deps(Test386)
+	} else {
+		fmt.Printf("Skip Test386 on %s and/or %s\n", runtime.GOARCH, runtime.GOOS)
+	}
 
 	mg.Deps(Fmt, Vet)
 
@@ -109,20 +163,31 @@ func Check() {
 	mg.Deps(TestRace)
 }
 
+func testGoFlags() string {
+	if isCI() {
+		return ""
+	}
+
+	return "-test.short"
+}
+
 // Run tests in 32-bit mode
 // Note that we don't run with the extended tag. Currently not supported in 32 bit.
 func Test386() error {
-	return sh.RunWith(map[string]string{"GOARCH": "386"}, goexe, "test", "./...")
+	env := map[string]string{"GOARCH": "386", "GOFLAGS": testGoFlags()}
+	return runCmd(env, goexe, "test", "./...")
 }
 
 // Run tests
 func Test() error {
-	return sh.Run(goexe, "test", "./...", "-tags", buildTags())
+	env := map[string]string{"GOFLAGS": testGoFlags()}
+	return runCmd(env, goexe, "test", "./...", buildFlags(), "-tags", buildTags())
 }
 
 // Run tests with race detector
 func TestRace() error {
-	return sh.Run(goexe, "test", "-race", "./...", "-tags", buildTags())
+	env := map[string]string{"GOFLAGS": testGoFlags()}
+	return runCmd(env, goexe, "test", "-race", "./...", buildFlags(), "-tags", buildTags())
 }
 
 // Run gofmt linter
@@ -258,16 +323,59 @@ func TestCoverHTML() error {
 	return sh.Run(goexe, "tool", "cover", "-html="+coverAll)
 }
 
+func runCmd(env map[string]string, cmd string, args ...interface{}) error {
+	if mg.Verbose() {
+		return runWith(env, cmd, args...)
+	}
+	output, err := sh.OutputWith(env, cmd, argsToStrings(args...)...)
+	if err != nil {
+		fmt.Fprint(os.Stderr, output)
+	}
+
+	return err
+}
+
 func isGoLatest() bool {
-	return strings.Contains(runtime.Version(), "1.11")
+	return strings.Contains(runtime.Version(), "1.14")
+}
+
+func isCI() bool {
+	return os.Getenv("CI") != ""
+}
+
+func buildFlags() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"-buildmode", "exe"}
+	}
+	return nil
 }
 
 func buildTags() string {
 	// To build the extended Hugo SCSS/SASS enabled version, build with
 	// HUGO_BUILD_TAGS=extended mage install etc.
+	// To build without `hugo deploy` for smaller binary, use HUGO_BUILD_TAGS=nodeploy
 	if envtags := os.Getenv("HUGO_BUILD_TAGS"); envtags != "" {
 		return envtags
 	}
 	return "none"
+}
 
+func argsToStrings(v ...interface{}) []string {
+	var args []string
+	for _, arg := range v {
+		switch v := arg.(type) {
+		case string:
+			if v != "" {
+				args = append(args, v)
+			}
+		case []string:
+			if v != nil {
+				args = append(args, v...)
+			}
+		default:
+			panic("invalid type")
+		}
+	}
+
+	return args
 }

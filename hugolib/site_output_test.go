@@ -1,4 +1,4 @@
-// Copyright 2017-present The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,31 +14,31 @@
 package hugolib
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
+	qt "github.com/frankban/quicktest"
+	"github.com/gohugoio/hugo/config"
+	"github.com/gohugoio/hugo/resources/page"
+
 	"github.com/spf13/afero"
-
-	"github.com/stretchr/testify/require"
-
-	"fmt"
 
 	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/output"
-	"github.com/spf13/viper"
 )
 
 func TestSiteWithPageOutputs(t *testing.T) {
 	for _, outputs := range [][]string{{"html", "json", "calendar"}, {"json"}} {
+		outputs := outputs
 		t.Run(fmt.Sprintf("%v", outputs), func(t *testing.T) {
+			t.Parallel()
 			doTestSiteWithPageOutputs(t, outputs)
 		})
 	}
 }
 
 func doTestSiteWithPageOutputs(t *testing.T, outputs []string) {
-	t.Parallel()
-
 	outputsStr := strings.Replace(fmt.Sprintf("%q", outputs), " ", ", ", -1)
 
 	siteConfig := `
@@ -47,7 +47,7 @@ baseURL = "http://example.com/blog"
 paginate = 1
 defaultContentLanguage = "en"
 
-disableKinds = ["section", "taxonomy", "taxonomyTerm", "RSS", "sitemap", "robotsTXT", "404"]
+disableKinds = ["section", "term", "taxonomy", "RSS", "sitemap", "robotsTXT", "404"]
 
 [Taxonomies]
 tag = "tags"
@@ -82,19 +82,16 @@ outputs: %s
 
 `
 
-	mf := afero.NewMemMapFs()
-
-	writeToFs(t, mf, "i18n/en.toml", `
+	b := newTestSitesBuilder(t).WithConfigFile("toml", siteConfig)
+	b.WithI18n("en.toml", `
 [elbow]
 other = "Elbow"
-`)
-	writeToFs(t, mf, "i18n/nn.toml", `
+`, "nn.toml", `
 [elbow]
 other = "Olboge"
 `)
 
-	th, h := newTestSitesFromConfig(t, mf, siteConfig,
-
+	b.WithTemplates(
 		// Case issue partials #3333
 		"layouts/partials/GoHugo.html", `Go Hugo Partial`,
 		"layouts/_default/baseof.json", `START JSON:{{block "main" .}}default content{{ end }}:END JSON`,
@@ -131,43 +128,37 @@ Len Pages: {{ .Kind }} {{ len .Site.RegularPages }} Page Number: {{ .Paginator.P
 `,
 		"layouts/_default/single.html", `{{ define "main" }}{{ .Content }}{{ end }}`,
 	)
-	require.Len(t, h.Sites, 2)
 
-	fs := th.Fs
-
-	writeSource(t, fs, "content/_index.md", fmt.Sprintf(pageTemplate, "JSON Home", outputsStr))
-	writeSource(t, fs, "content/_index.nn.md", fmt.Sprintf(pageTemplate, "JSON Nynorsk Heim", outputsStr))
+	b.WithContent("_index.md", fmt.Sprintf(pageTemplate, "JSON Home", outputsStr))
+	b.WithContent("_index.nn.md", fmt.Sprintf(pageTemplate, "JSON Nynorsk Heim", outputsStr))
 
 	for i := 1; i <= 10; i++ {
-		writeSource(t, fs, fmt.Sprintf("content/p%d.md", i), fmt.Sprintf(pageTemplate, fmt.Sprintf("Page %d", i), outputsStr))
-
+		b.WithContent(fmt.Sprintf("p%d.md", i), fmt.Sprintf(pageTemplate, fmt.Sprintf("Page %d", i), outputsStr))
 	}
 
-	err := h.Build(BuildCfg{})
+	b.Build(BuildCfg{})
 
-	require.NoError(t, err)
+	s := b.H.Sites[0]
+	b.Assert(s.language.Lang, qt.Equals, "en")
 
-	s := h.Sites[0]
-	require.Equal(t, "en", s.Language.Lang)
+	home := s.getPage(page.KindHome)
 
-	home := s.getPage(KindHome)
-
-	require.NotNil(t, home)
+	b.Assert(home, qt.Not(qt.IsNil))
 
 	lenOut := len(outputs)
 
-	require.Len(t, home.outputFormats, lenOut)
+	b.Assert(len(home.OutputFormats()), qt.Equals, lenOut)
 
 	// There is currently always a JSON output to make it simpler ...
 	altFormats := lenOut - 1
 	hasHTML := helpers.InStringArray(outputs, "html")
-	th.assertFileContent("public/index.json",
+	b.AssertFileContent("public/index.json",
 		"List JSON",
 		fmt.Sprintf("Alt formats: %d", altFormats),
 	)
 
 	if hasHTML {
-		th.assertFileContent("public/index.json",
+		b.AssertFileContent("public/index.json",
 			"Alt Output: HTML",
 			"Output/Rel: JSON/alternate|",
 			"Output/Rel: HTML/canonical|",
@@ -176,7 +167,7 @@ Len Pages: {{ .Kind }} {{ len .Site.RegularPages }} Page Number: {{ .Paginator.P
 			"OtherShort: <h1>Hi!</h1>",
 		)
 
-		th.assertFileContent("public/index.html",
+		b.AssertFileContent("public/index.html",
 			// The HTML entity is a deliberate part of this test: The HTML templates are
 			// parsed with html/template.
 			`List HTML|JSON Home|<atom:link href=http://example.com/blog/ rel="self" type="text/html" />`,
@@ -185,21 +176,21 @@ Len Pages: {{ .Kind }} {{ len .Site.RegularPages }} Page Number: {{ .Paginator.P
 			"OtherShort: <h1>Hi!</h1>",
 			"Len Pages: home 10",
 		)
-		th.assertFileContent("public/page/2/index.html", "Page Number: 2")
-		th.assertFileNotExist("public/page/2/index.json")
+		b.AssertFileContent("public/page/2/index.html", "Page Number: 2")
+		b.Assert(b.CheckExists("public/page/2/index.json"), qt.Equals, false)
 
-		th.assertFileContent("public/nn/index.html",
+		b.AssertFileContent("public/nn/index.html",
 			"List HTML|JSON Nynorsk Heim|",
 			"nn: Olboge")
 	} else {
-		th.assertFileContent("public/index.json",
+		b.AssertFileContent("public/index.json",
 			"Output/Rel: JSON/canonical|",
 			// JSON is plain text, so no need to safeHTML this and that
 			`<atom:link href=http://example.com/blog/index.json rel="self" type="application/json" />`,
 			"ShortJSON",
 			"OtherShort: <h1>Hi!</h1>",
 		)
-		th.assertFileContent("public/nn/index.json",
+		b.AssertFileContent("public/nn/index.json",
 			"List JSON|JSON Nynorsk Heim|",
 			"nn: Olboge",
 			"ShortJSON",
@@ -207,26 +198,21 @@ Len Pages: {{ .Kind }} {{ len .Site.RegularPages }} Page Number: {{ .Paginator.P
 	}
 
 	of := home.OutputFormats()
-	require.Len(t, of, lenOut)
-	require.Nil(t, of.Get("Hugo"))
-	require.NotNil(t, of.Get("json"))
+
 	json := of.Get("JSON")
-	_, err = home.AlternativeOutputFormats()
-	require.Error(t, err)
-	require.NotNil(t, json)
-	require.Equal(t, "/blog/index.json", json.RelPermalink())
-	require.Equal(t, "http://example.com/blog/index.json", json.Permalink())
+	b.Assert(json, qt.Not(qt.IsNil))
+	b.Assert(json.RelPermalink(), qt.Equals, "/blog/index.json")
+	b.Assert(json.Permalink(), qt.Equals, "http://example.com/blog/index.json")
 
 	if helpers.InStringArray(outputs, "cal") {
 		cal := of.Get("calendar")
-		require.NotNil(t, cal)
-		require.Equal(t, "/blog/index.ics", cal.RelPermalink())
-		require.Equal(t, "webcal://example.com/blog/index.ics", cal.Permalink())
+		b.Assert(cal, qt.Not(qt.IsNil))
+		b.Assert(cal.RelPermalink(), qt.Equals, "/blog/index.ics")
+		b.Assert(cal.Permalink(), qt.Equals, "webcal://example.com/blog/index.ics")
 	}
 
-	require.True(t, home.HasShortcode("myShort"))
-	require.False(t, home.HasShortcode("doesNotExist"))
-
+	b.Assert(home.HasShortcode("myShort"), qt.Equals, true)
+	b.Assert(home.HasShortcode("doesNotExist"), qt.Equals, false)
 }
 
 // Issue #3447
@@ -237,7 +223,7 @@ baseURL = "http://example.com/blog"
 paginate = 1
 defaultContentLanguage = "en"
 
-disableKinds = ["page", "section", "taxonomy", "taxonomyTerm", "sitemap", "robotsTXT", "404"]
+disableKinds = ["page", "section", "term", "taxonomy", "sitemap", "robotsTXT", "404"]
 
 [outputFormats]
 [outputFormats.RSS]
@@ -246,6 +232,8 @@ baseName = "feed"
 
 `
 
+	c := qt.New(t)
+
 	mf := afero.NewMemMapFs()
 	writeToFs(t, mf, "content/foo.html", `foo`)
 
@@ -253,15 +241,14 @@ baseName = "feed"
 
 	err := h.Build(BuildCfg{})
 
-	require.NoError(t, err)
+	c.Assert(err, qt.IsNil)
 
 	th.assertFileContent("public/feed.xml", "Recent content on")
 
 	s := h.Sites[0]
 
-	//Issue #3450
-	require.Equal(t, "http://example.com/blog/feed.xml", s.Info.RSSLink)
-
+	// Issue #3450
+	c.Assert(s.Info.RSSLink, qt.Equals, "http://example.com/blog/feed.xml")
 }
 
 // Issue #3614
@@ -272,7 +259,7 @@ baseURL = "http://example.com/blog"
 paginate = 1
 defaultContentLanguage = "en"
 
-disableKinds = ["page", "section", "taxonomy", "taxonomyTerm", "sitemap", "robotsTXT", "404"]
+disableKinds = ["page", "section", "term", "taxonomy", "sitemap", "robotsTXT", "404"]
 
 [mediaTypes]
 [mediaTypes."text/nodot"]
@@ -303,6 +290,8 @@ baseName = "customdelimbase"
 
 `
 
+	c := qt.New(t)
+
 	mf := afero.NewMemMapFs()
 	writeToFs(t, mf, "content/foo.html", `foo`)
 	writeToFs(t, mf, "layouts/_default/list.dotless", `a dotless`)
@@ -314,7 +303,9 @@ baseName = "customdelimbase"
 
 	err := h.Build(BuildCfg{})
 
-	require.NoError(t, err)
+	c.Assert(err, qt.IsNil)
+
+	s := h.Sites[0]
 
 	th.assertFileContent("public/_redirects", "a dotless")
 	th.assertFileContent("public/defaultdelimbase.defd", "default delimim")
@@ -322,87 +313,103 @@ baseName = "customdelimbase"
 	th.assertFileContent("public/nosuffixbase", "no suffix")
 	th.assertFileContent("public/customdelimbase_del", "custom delim")
 
-	s := h.Sites[0]
-	home := s.getPage(KindHome)
-	require.NotNil(t, home)
+	home := s.getPage(page.KindHome)
+	c.Assert(home, qt.Not(qt.IsNil))
 
 	outputs := home.OutputFormats()
 
-	require.Equal(t, "/blog/_redirects", outputs.Get("DOTLESS").RelPermalink())
-	require.Equal(t, "/blog/defaultdelimbase.defd", outputs.Get("DEF").RelPermalink())
-	require.Equal(t, "/blog/nosuffixbase", outputs.Get("NOS").RelPermalink())
-	require.Equal(t, "/blog/customdelimbase_del", outputs.Get("CUS").RelPermalink())
-
+	c.Assert(outputs.Get("DOTLESS").RelPermalink(), qt.Equals, "/blog/_redirects")
+	c.Assert(outputs.Get("DEF").RelPermalink(), qt.Equals, "/blog/defaultdelimbase.defd")
+	c.Assert(outputs.Get("NOS").RelPermalink(), qt.Equals, "/blog/nosuffixbase")
+	c.Assert(outputs.Get("CUS").RelPermalink(), qt.Equals, "/blog/customdelimbase_del")
 }
 
 func TestCreateSiteOutputFormats(t *testing.T) {
-	assert := require.New(t)
+	t.Run("Basic", func(t *testing.T) {
+		c := qt.New(t)
 
-	outputsConfig := map[string]interface{}{
-		KindHome:    []string{"HTML", "JSON"},
-		KindSection: []string{"JSON"},
-	}
+		outputsConfig := map[string]interface{}{
+			page.KindHome:    []string{"HTML", "JSON"},
+			page.KindSection: []string{"JSON"},
+		}
 
-	cfg := viper.New()
-	cfg.Set("outputs", outputsConfig)
+		cfg := config.New()
+		cfg.Set("outputs", outputsConfig)
 
-	outputs, err := createSiteOutputFormats(output.DefaultFormats, cfg)
-	assert.NoError(err)
-	assert.Equal(output.Formats{output.JSONFormat}, outputs[KindSection])
-	assert.Equal(output.Formats{output.HTMLFormat, output.JSONFormat}, outputs[KindHome])
+		outputs, err := createSiteOutputFormats(output.DefaultFormats, cfg.GetStringMap("outputs"), false)
+		c.Assert(err, qt.IsNil)
+		c.Assert(outputs[page.KindSection], deepEqualsOutputFormats, output.Formats{output.JSONFormat})
+		c.Assert(outputs[page.KindHome], deepEqualsOutputFormats, output.Formats{output.HTMLFormat, output.JSONFormat})
 
-	// Defaults
-	assert.Equal(output.Formats{output.HTMLFormat, output.RSSFormat}, outputs[KindTaxonomy])
-	assert.Equal(output.Formats{output.HTMLFormat, output.RSSFormat}, outputs[KindTaxonomyTerm])
-	assert.Equal(output.Formats{output.HTMLFormat}, outputs[KindPage])
+		// Defaults
+		c.Assert(outputs[page.KindTerm], deepEqualsOutputFormats, output.Formats{output.HTMLFormat, output.RSSFormat})
+		c.Assert(outputs[page.KindTaxonomy], deepEqualsOutputFormats, output.Formats{output.HTMLFormat, output.RSSFormat})
+		c.Assert(outputs[page.KindPage], deepEqualsOutputFormats, output.Formats{output.HTMLFormat})
 
-	// These aren't (currently) in use when rendering in Hugo,
-	// but the pages needs to be assigned an output format,
-	// so these should also be correct/sensible.
-	assert.Equal(output.Formats{output.RSSFormat}, outputs[kindRSS])
-	assert.Equal(output.Formats{output.SitemapFormat}, outputs[kindSitemap])
-	assert.Equal(output.Formats{output.RobotsTxtFormat}, outputs[kindRobotsTXT])
-	assert.Equal(output.Formats{output.HTMLFormat}, outputs[kind404])
+		// These aren't (currently) in use when rendering in Hugo,
+		// but the pages needs to be assigned an output format,
+		// so these should also be correct/sensible.
+		c.Assert(outputs[kindRSS], deepEqualsOutputFormats, output.Formats{output.RSSFormat})
+		c.Assert(outputs[kindSitemap], deepEqualsOutputFormats, output.Formats{output.SitemapFormat})
+		c.Assert(outputs[kindRobotsTXT], deepEqualsOutputFormats, output.Formats{output.RobotsTxtFormat})
+		c.Assert(outputs[kind404], deepEqualsOutputFormats, output.Formats{output.HTMLFormat})
+	})
 
+	// Issue #4528
+	t.Run("Mixed case", func(t *testing.T) {
+		c := qt.New(t)
+		cfg := config.New()
+
+		outputsConfig := map[string]interface{}{
+			// Note that we in Hugo 0.53.0 renamed this Kind to "taxonomy",
+			// but keep this test to test the legacy mapping.
+			"taxonomyterm": []string{"JSON"},
+		}
+		cfg.Set("outputs", outputsConfig)
+
+		outputs, err := createSiteOutputFormats(output.DefaultFormats, cfg.GetStringMap("outputs"), false)
+		c.Assert(err, qt.IsNil)
+		c.Assert(outputs[page.KindTaxonomy], deepEqualsOutputFormats, output.Formats{output.JSONFormat})
+	})
 }
 
 func TestCreateSiteOutputFormatsInvalidConfig(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	outputsConfig := map[string]interface{}{
-		KindHome: []string{"FOO", "JSON"},
+		page.KindHome: []string{"FOO", "JSON"},
 	}
 
-	cfg := viper.New()
+	cfg := config.New()
 	cfg.Set("outputs", outputsConfig)
 
-	_, err := createSiteOutputFormats(output.DefaultFormats, cfg)
-	assert.Error(err)
+	_, err := createSiteOutputFormats(output.DefaultFormats, cfg.GetStringMap("outputs"), false)
+	c.Assert(err, qt.Not(qt.IsNil))
 }
 
 func TestCreateSiteOutputFormatsEmptyConfig(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	outputsConfig := map[string]interface{}{
-		KindHome: []string{},
+		page.KindHome: []string{},
 	}
 
-	cfg := viper.New()
+	cfg := config.New()
 	cfg.Set("outputs", outputsConfig)
 
-	outputs, err := createSiteOutputFormats(output.DefaultFormats, cfg)
-	assert.NoError(err)
-	assert.Equal(output.Formats{output.HTMLFormat, output.RSSFormat}, outputs[KindHome])
+	outputs, err := createSiteOutputFormats(output.DefaultFormats, cfg.GetStringMap("outputs"), false)
+	c.Assert(err, qt.IsNil)
+	c.Assert(outputs[page.KindHome], deepEqualsOutputFormats, output.Formats{output.HTMLFormat, output.RSSFormat})
 }
 
 func TestCreateSiteOutputFormatsCustomFormats(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
 	outputsConfig := map[string]interface{}{
-		KindHome: []string{},
+		page.KindHome: []string{},
 	}
 
-	cfg := viper.New()
+	cfg := config.New()
 	cfg.Set("outputs", outputsConfig)
 
 	var (
@@ -410,7 +417,202 @@ func TestCreateSiteOutputFormatsCustomFormats(t *testing.T) {
 		customHTML = output.Format{Name: "HTML", BaseName: "customHTML"}
 	)
 
-	outputs, err := createSiteOutputFormats(output.Formats{customRSS, customHTML}, cfg)
-	assert.NoError(err)
-	assert.Equal(output.Formats{customHTML, customRSS}, outputs[KindHome])
+	outputs, err := createSiteOutputFormats(output.Formats{customRSS, customHTML}, cfg.GetStringMap("outputs"), false)
+	c.Assert(err, qt.IsNil)
+	c.Assert(outputs[page.KindHome], deepEqualsOutputFormats, output.Formats{customHTML, customRSS})
+}
+
+// https://github.com/gohugoio/hugo/issues/5849
+func TestOutputFormatPermalinkable(t *testing.T) {
+	config := `
+baseURL = "https://example.com"
+
+
+
+# DAMP is similar to AMP, but not permalinkable.
+[outputFormats]
+[outputFormats.damp]
+mediaType = "text/html"
+path = "damp"
+[outputFormats.ramp]
+mediaType = "text/html"
+path = "ramp"
+permalinkable = true
+[outputFormats.base]
+mediaType = "text/html"
+isHTML = true
+baseName = "that"
+permalinkable = true
+[outputFormats.nobase]
+mediaType = "application/json"
+permalinkable = true
+
+`
+
+	b := newTestSitesBuilder(t).WithConfigFile("toml", config)
+	b.WithContent("_index.md", `
+---
+Title: Home Sweet Home
+outputs: [ "html", "amp", "damp", "base" ]
+---
+
+`)
+
+	b.WithContent("blog/html-amp.md", `
+---
+Title: AMP and HTML
+outputs: [ "html", "amp" ]
+---
+
+`)
+
+	b.WithContent("blog/html-damp.md", `
+---
+Title: DAMP and HTML
+outputs: [ "html", "damp" ]
+---
+
+`)
+
+	b.WithContent("blog/html-ramp.md", `
+---
+Title: RAMP and HTML
+outputs: [ "html", "ramp" ]
+---
+
+`)
+
+	b.WithContent("blog/html.md", `
+---
+Title: HTML only
+outputs: [ "html" ]
+---
+
+`)
+
+	b.WithContent("blog/amp.md", `
+---
+Title: AMP only
+outputs: [ "amp" ]
+---
+
+`)
+
+	b.WithContent("blog/html-base-nobase.md", `
+---
+Title: HTML, Base and Nobase
+outputs: [ "html", "base", "nobase" ]
+---
+
+`)
+
+	const commonTemplate = `
+This RelPermalink: {{ .RelPermalink }}
+Output Formats: {{ len .OutputFormats }};{{ range .OutputFormats }}{{ .Name }};{{ .RelPermalink }}|{{ end }}
+
+`
+
+	b.WithTemplatesAdded("index.html", commonTemplate)
+	b.WithTemplatesAdded("_default/single.html", commonTemplate)
+	b.WithTemplatesAdded("_default/single.json", commonTemplate)
+
+	b.Build(BuildCfg{})
+
+	b.AssertFileContent("public/index.html",
+		"This RelPermalink: /",
+		"Output Formats: 4;HTML;/|AMP;/amp/|damp;/damp/|base;/that.html|",
+	)
+
+	b.AssertFileContent("public/amp/index.html",
+		"This RelPermalink: /amp/",
+		"Output Formats: 4;HTML;/|AMP;/amp/|damp;/damp/|base;/that.html|",
+	)
+
+	b.AssertFileContent("public/blog/html-amp/index.html",
+		"Output Formats: 2;HTML;/blog/html-amp/|AMP;/amp/blog/html-amp/|",
+		"This RelPermalink: /blog/html-amp/")
+
+	b.AssertFileContent("public/amp/blog/html-amp/index.html",
+		"Output Formats: 2;HTML;/blog/html-amp/|AMP;/amp/blog/html-amp/|",
+		"This RelPermalink: /amp/blog/html-amp/")
+
+	// Damp is not permalinkable
+	b.AssertFileContent("public/damp/blog/html-damp/index.html",
+		"This RelPermalink: /blog/html-damp/",
+		"Output Formats: 2;HTML;/blog/html-damp/|damp;/damp/blog/html-damp/|")
+
+	b.AssertFileContent("public/blog/html-ramp/index.html",
+		"This RelPermalink: /blog/html-ramp/",
+		"Output Formats: 2;HTML;/blog/html-ramp/|ramp;/ramp/blog/html-ramp/|")
+
+	b.AssertFileContent("public/ramp/blog/html-ramp/index.html",
+		"This RelPermalink: /ramp/blog/html-ramp/",
+		"Output Formats: 2;HTML;/blog/html-ramp/|ramp;/ramp/blog/html-ramp/|")
+
+	// https://github.com/gohugoio/hugo/issues/5877
+	outputFormats := "Output Formats: 3;HTML;/blog/html-base-nobase/|base;/blog/html-base-nobase/that.html|nobase;/blog/html-base-nobase/index.json|"
+
+	b.AssertFileContent("public/blog/html-base-nobase/index.json",
+		"This RelPermalink: /blog/html-base-nobase/index.json",
+		outputFormats,
+	)
+
+	b.AssertFileContent("public/blog/html-base-nobase/that.html",
+		"This RelPermalink: /blog/html-base-nobase/that.html",
+		outputFormats,
+	)
+
+	b.AssertFileContent("public/blog/html-base-nobase/index.html",
+		"This RelPermalink: /blog/html-base-nobase/",
+		outputFormats,
+	)
+}
+
+func TestSiteWithPageNoOutputs(t *testing.T) {
+	t.Parallel()
+
+	b := newTestSitesBuilder(t)
+	b.WithConfigFile("toml", `
+baseURL = "https://example.com"
+
+[outputFormats.o1]
+mediaType = "text/html"
+
+
+
+`)
+	b.WithContent("outputs-empty.md", `---
+title: "Empty Outputs"
+outputs: []
+---
+
+Word1. Word2.
+
+`,
+		"outputs-string.md", `---
+title: "Outputs String"
+outputs: "o1"
+---
+
+Word1. Word2.
+
+`)
+
+	b.WithTemplates("index.html", `
+{{ range .Site.RegularPages }}
+WordCount: {{ .WordCount }}
+{{ end }}
+`)
+
+	b.WithTemplates("_default/single.html", `HTML: {{ .Content }}`)
+	b.WithTemplates("_default/single.o1.html", `O1: {{ .Content }}`)
+
+	b.Build(BuildCfg{})
+
+	b.AssertFileContent(
+		"public/index.html",
+		" WordCount: 2")
+
+	b.AssertFileContent("public/outputs-empty/index.html", "HTML:", "Word1. Word2.")
+	b.AssertFileContent("public/outputs-string/index.html", "O1:", "Word1. Word2.")
 }

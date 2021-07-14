@@ -16,12 +16,14 @@ package langs
 import (
 	"testing"
 
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
+	"github.com/gohugoio/hugo/config"
+
+	qt "github.com/frankban/quicktest"
 )
 
 func TestGetGlobalOnlySetting(t *testing.T) {
-	v := viper.New()
+	c := qt.New(t)
+	v := config.New()
 	v.Set("defaultContentLanguageInSubdir", true)
 	v.Set("contentDir", "content")
 	v.Set("paginatePath", "page")
@@ -29,20 +31,20 @@ func TestGetGlobalOnlySetting(t *testing.T) {
 	lang.Set("defaultContentLanguageInSubdir", false)
 	lang.Set("paginatePath", "side")
 
-	require.True(t, lang.GetBool("defaultContentLanguageInSubdir"))
-	require.Equal(t, "side", lang.GetString("paginatePath"))
+	c.Assert(lang.GetBool("defaultContentLanguageInSubdir"), qt.Equals, true)
+	c.Assert(lang.GetString("paginatePath"), qt.Equals, "side")
 }
 
 func TestLanguageParams(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 
-	v := viper.New()
+	v := config.New()
 	v.Set("p1", "p1cfg")
 	v.Set("contentDir", "content")
 
 	lang := NewDefaultLanguage(v)
 	lang.SetParam("p1", "p1p")
 
-	assert.Equal("p1p", lang.Params()["p1"])
-	assert.Equal("p1cfg", lang.Get("p1"))
+	c.Assert(lang.Params()["p1"], qt.Equals, "p1p")
+	c.Assert(lang.Get("p1"), qt.Equals, "p1cfg")
 }

@@ -1,4 +1,4 @@
-// Copyright 2018 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,10 +25,9 @@ import (
 )
 
 func main() {
-
 	templateFolder := filepath.Join("..", "templates")
 
-	temlatePath := filepath.Join(".", templateFolder)
+	templatePath := filepath.Join(".", templateFolder)
 
 	file, err := os.Create("../templates.autogen.go")
 	if err != nil {
@@ -38,7 +37,10 @@ func main() {
 
 	var nameValues []string
 
-	err = filepath.Walk(temlatePath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(templatePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
 		if info.IsDir() {
 			return nil
@@ -63,7 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Fprint(file, `// Copyright 2018 The Hugo Authors. All rights reserved.
+	fmt.Fprint(file, `// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,7 +91,6 @@ var EmbeddedTemplates = [][2]string{
 		fmt.Fprint(file, "	", v, ",\n")
 	}
 	fmt.Fprint(file, "}\n")
-
 }
 
 func nameValue(name, value string) string {

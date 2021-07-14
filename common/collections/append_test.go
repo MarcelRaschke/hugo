@@ -14,17 +14,17 @@
 package collections
 
 import (
-	"fmt"
-	"reflect"
+	"html/template"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestAppend(t *testing.T) {
 	t.Parallel()
+	c := qt.New(t)
 
-	for i, test := range []struct {
+	for _, test := range []struct {
 		start    interface{}
 		addend   []interface{}
 		expected interface{}
@@ -32,47 +32,59 @@ func TestAppend(t *testing.T) {
 		{[]string{"a", "b"}, []interface{}{"c"}, []string{"a", "b", "c"}},
 		{[]string{"a", "b"}, []interface{}{"c", "d", "e"}, []string{"a", "b", "c", "d", "e"}},
 		{[]string{"a", "b"}, []interface{}{[]string{"c", "d", "e"}}, []string{"a", "b", "c", "d", "e"}},
+		{[]string{"a"}, []interface{}{"b", template.HTML("c")}, []interface{}{"a", "b", template.HTML("c")}},
 		{nil, []interface{}{"a", "b"}, []string{"a", "b"}},
 		{nil, []interface{}{nil}, []interface{}{nil}},
 		{[]interface{}{}, []interface{}{[]string{"c", "d", "e"}}, []string{"c", "d", "e"}},
-		{tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}},
+		{
+			tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}},
 			[]interface{}{&tstSlicer{"c"}},
-			tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}, &tstSlicer{"c"}}},
-		{&tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}},
+			tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}, &tstSlicer{"c"}},
+		},
+		{
+			&tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}},
 			[]interface{}{&tstSlicer{"c"}},
-			tstSlicers{&tstSlicer{"a"},
+			tstSlicers{
+				&tstSlicer{"a"},
 				&tstSlicer{"b"},
-				&tstSlicer{"c"}}},
-		{testSlicerInterfaces{&tstSlicerIn1{"a"}, &tstSlicerIn1{"b"}},
+				&tstSlicer{"c"},
+			},
+		},
+		{
+			testSlicerInterfaces{&tstSlicerIn1{"a"}, &tstSlicerIn1{"b"}},
 			[]interface{}{&tstSlicerIn1{"c"}},
-			testSlicerInterfaces{&tstSlicerIn1{"a"}, &tstSlicerIn1{"b"}, &tstSlicerIn1{"c"}}},
+			testSlicerInterfaces{&tstSlicerIn1{"a"}, &tstSlicerIn1{"b"}, &tstSlicerIn1{"c"}},
+		},
 		//https://github.com/gohugoio/hugo/issues/5361
-		{[]string{"a", "b"}, []interface{}{tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}}},
-			[]interface{}{"a", "b", &tstSlicer{"a"}, &tstSlicer{"b"}}},
-		{[]string{"a", "b"}, []interface{}{&tstSlicer{"a"}},
-			[]interface{}{"a", "b", &tstSlicer{"a"}}},
+		{
+			[]string{"a", "b"},
+			[]interface{}{tstSlicers{&tstSlicer{"a"}, &tstSlicer{"b"}}},
+			[]interface{}{"a", "b", &tstSlicer{"a"}, &tstSlicer{"b"}},
+		},
+		{
+			[]string{"a", "b"},
+			[]interface{}{&tstSlicer{"a"}},
+			[]interface{}{"a", "b", &tstSlicer{"a"}},
+		},
 		// Errors
 		{"", []interface{}{[]string{"a", "b"}}, false},
 		// No string concatenation.
-		{"ab",
+		{
+			"ab",
 			[]interface{}{"c"},
-			false},
+			false,
+		},
 	} {
-
-		errMsg := fmt.Sprintf("[%d]", i)
 
 		result, err := Append(test.start, test.addend...)
 
 		if b, ok := test.expected.(bool); ok && !b {
-			require.Error(t, err, errMsg)
+
+			c.Assert(err, qt.Not(qt.IsNil))
 			continue
 		}
 
-		require.NoError(t, err, errMsg)
-
-		if !reflect.DeepEqual(test.expected, result) {
-			t.Fatalf("%s got\n%T: %v\nexpected\n%T: %v", errMsg, result, result, test.expected, test.expected)
-		}
+		c.Assert(err, qt.IsNil)
+		c.Assert(result, qt.DeepEquals, test.expected)
 	}
-
 }

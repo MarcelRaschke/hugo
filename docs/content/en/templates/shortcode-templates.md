@@ -37,7 +37,7 @@ To create a shortcode, place an HTML template in the `layouts/shortcodes` direct
 You can organize your shortcodes in subfolders, e.g. in `layouts/shortcodes/boxes`. These shortcodes would then be accessible with their relative path, e.g:
 
 ```
-{{/*< boxes/square >*/}}
+{{</* boxes/square */>}}
 ```
 
 Note the forward slash.
@@ -88,21 +88,23 @@ For the second position, you would just use:
 `with` is great when the output depends on a parameter being set:
 
 ```
-{{ with .Get "class"}} class="{{.}}"{{ end }}
+{{ with .Get "class" }} class="{{ . }}"{{ end }}
 ```
 
 `.Get` can also be used to check if a parameter has been provided. This is
 most helpful when the condition depends on either of the values, or both:
 
 ```
-{{ or .Get "title" | .Get "alt" | if }} alt="{{ with .Get "alt"}}{{.}}{{else}}{{.Get "title"}}{{end}}"{{ end }}
+{{ if or (.Get "title") (.Get "alt") }} alt="{{ with .Get "alt" }}{{ . }}{{ else }}{{ .Get "title" }}{{ end }}"{{ end }}
 ```
 
 #### `.Inner`
 
 If a closing shortcode is used, the `.Inner` variable will be populated with all of the content between the opening and closing shortcodes. If a closing shortcode is required, you can check the length of `.Inner` as an indicator of its existence.
 
-A shortcode with content declared via the `.Inner` variable can also be declared without the inline content and without the closing shortcode by using the self-closing syntax:
+A shortcode with content declared via the `.Inner` variable can also be declared without the 
+content and without the closing 
+by using the self-closing syntax:
 
 ```
 {{</* innershortcode /*/>}}
@@ -128,16 +130,16 @@ The `.IsNamedParams` variable checks whether the shortcode declaration uses name
 For example, you could create an `image` shortcode that can take either a `src` named parameter or the first positional parameter, depending on the preference of the content's author. Let's assume the `image` shortcode is called as follows:
 
 ```
-{{</* image src="images/my-image.jpg"*/>}}
+{{</* image src="images/my-image.jpg" */>}}
 ```
 
 You could then include the following as part of your shortcode templating:
 
 ```
 {{ if .IsNamedParams }}
-<img src="{{.Get "src" }}" alt="">
+<img src="{{ .Get "src" }}" alt="">
 {{ else }}
-<img src="{{.Get 0}}" alt="">
+<img src="{{ .Get 0 }}" alt="">
 {{ end }}
 ```
 
@@ -183,7 +185,7 @@ Would load the template at `/layouts/shortcodes/youtube.html`:
 
 {{< code file="/layouts/shortcodes/youtube.html" >}}
 <div class="embed video-player">
-<iframe class="youtube-player" type="text/html" width="640" height="385" src="http://www.youtube.com/embed/{{ index .Params 0 }}" allowfullscreen frameborder="0">
+<iframe class="youtube-player" type="text/html" width="640" height="385" src="https://www.youtube.com/embed/{{ index .Params 0 }}" allowfullscreen frameborder="0">
 </iframe>
 </div>
 {{< /code >}}
@@ -192,7 +194,7 @@ Would load the template at `/layouts/shortcodes/youtube.html`:
 <div class="embed video-player">
     <iframe class="youtube-player" type="text/html"
         width="640" height="385"
-        src="http://www.youtube.com/embed/09jf3ow9jfw"
+        src="https://www.youtube.com/embed/09jf3ow9jfw"
         allowfullscreen frameborder="0">
     </iframe>
 </div>
@@ -211,17 +213,17 @@ You have created the shortcode at `/layouts/shortcodes/img.html`, which loads th
 {{< code file="/layouts/shortcodes/img.html" >}}
 <!-- image -->
 <figure {{ with .Get "class" }}class="{{.}}"{{ end }}>
-    {{ with .Get "link"}}<a href="{{.}}">{{ end }}
-        <img src="{{ .Get "src" }}" {{ if or (.Get "alt") (.Get "caption") }}alt="{{ with .Get "alt"}}{{.}}{{else}}{{ .Get "caption" }}{{ end }}"{{ end }} />
-    {{ if .Get "link"}}</a>{{ end }}
-    {{ if or (or (.Get "title") (.Get "caption")) (.Get "attr")}}
+    {{ with .Get "link" }}<a href="{{ . }}">{{ end }}
+        <img src="{{ .Get "src" }}" {{ if or (.Get "alt") (.Get "caption") }}alt="{{ with .Get "alt" }}{{ . }}{{ else }}{{ .Get "caption" }}{{ end }}"{{ end }} />
+    {{ if .Get "link" }}</a>{{ end }}
+    {{ if or (or (.Get "title") (.Get "caption")) (.Get "attr") }}
     <figcaption>{{ if isset .Params "title" }}
         <h4>{{ .Get "title" }}</h4>{{ end }}
-        {{ if or (.Get "caption") (.Get "attr")}}<p>
+        {{ if or (.Get "caption") (.Get "attr") }}<p>
         {{ .Get "caption" }}
-        {{ with .Get "attrlink"}}<a href="{{.}}"> {{ end }}
+        {{ with .Get "attrlink" }}<a href="{{ . }}"> {{ end }}
             {{ .Get "attr" }}
-        {{ if .Get "attrlink"}}</a> {{ end }}
+        {{ if .Get "attrlink" }}</a> {{ end }}
         </p> {{ end }}
     </figcaption>
     {{ end }}
@@ -252,11 +254,11 @@ Would load the template found at `/layouts/shortcodes/vimeo.html`:
 {{< code file="/layouts/shortcodes/vimeo.html" >}}
 {{ if .IsNamedParams }}
   <div class="{{ if .Get "class" }}{{ .Get "class" }}{{ else }}vimeo-container{{ end }}">
-    <iframe src="//player.vimeo.com/video/{{ .Get "id" }}" allowfullscreen></iframe>
+    <iframe src="https://player.vimeo.com/video/{{ .Get "id" }}" allowfullscreen></iframe>
   </div>
 {{ else }}
   <div class="{{ if len .Params | eq 2 }}{{ .Get 1 }}{{ else }}vimeo-container{{ end }}">
-    <iframe src="//player.vimeo.com/video/{{ .Get 0 }}" allowfullscreen></iframe>
+    <iframe src="https://player.vimeo.com/video/{{ .Get 0 }}" allowfullscreen></iframe>
   </div>
 {{ end }}
 {{< /code >}}
@@ -265,10 +267,10 @@ Would be rendered as:
 
 {{< code file="vimeo-iframes.html" copy="false" >}}
 <div class="vimeo-container">
-  <iframe src="//player.vimeo.com/video/49718712" allowfullscreen></iframe>
+  <iframe src="https://player.vimeo.com/video/49718712" allowfullscreen></iframe>
 </div>
 <div class="flex-video">
-  <iframe src="//player.vimeo.com/video/49718712" allowfullscreen></iframe>
+  <iframe src="https://player.vimeo.com/video/49718712" allowfullscreen></iframe>
 </div>
 {{< /code >}}
 
@@ -287,7 +289,7 @@ The following is taken from `highlight`, which is a [built-in shortcode][] that 
 The template for the `highlight` shortcode uses the following code, which is already included in Hugo:
 
 ```
-{{ .Get 0 | highlight .Inner  }}
+{{ .Get 0 | highlight .Inner }}
 ```
 
 The rendered output of the HTML example code block will be as follows:
@@ -299,10 +301,6 @@ The rendered output of the HTML example code block will be as follows:
 </pre></div>
 {{< /code >}}
 
-{{% note %}}
-The preceding shortcode makes use of a Hugo-specific template function called `highlight`, which uses [Pygments](http://pygments.org) to add syntax highlighting to the example HTML code block. See the [developer tools page on syntax highlighting](/tools/syntax-highlighting/) for more information.
-{{% /note %}}
-
 ### Nested Shortcode: Image Gallery
 
 Hugo's [`.Parent` shortcode variable][parent] returns a boolean value depending on whether the shortcode in question is called within the context of a *parent* shortcode. This provides an inheritance model for common shortcode parameters.
@@ -310,8 +308,8 @@ Hugo's [`.Parent` shortcode variable][parent] returns a boolean value depending 
 The following example is contrived but demonstrates the concept. Assume you have a `gallery` shortcode that expects one named `class` parameter:
 
 {{< code file="layouts/shortcodes/gallery.html" >}}
-<div class="{{.Get "class"}}">
-  {{.Inner}}
+<div class="{{ .Get "class" }}">
+  {{ .Inner }}
 </div>
 {{< /code >}}
 
@@ -320,10 +318,10 @@ You also have an `img` shortcode with a single named `src` parameter that you wa
 {{< code file="layouts/shortcodes/img.html" >}}
 {{- $src := .Get "src" -}}
 {{- with .Parent -}}
-  <img src="{{$src}}" class="{{.Get "class"}}-image">
+  <img src="{{$src}}" class="{{ .Get "class" }}-image">
 {{- else -}}
   <img src="{{$src}}">
-{{- end }}
+{{- end -}}
 {{< /code >}}
 
 You can then call your shortcode in your content as follows:
@@ -370,6 +368,8 @@ More shortcode examples can be found in the [shortcodes directory for spf13.com]
 
 
 ## Inline Shortcodes
+
+{{< new-in "0.52.0" >}}
 
 Since Hugo 0.52, you can implement your shortcodes inline -- e.g. where you use them in the content file. This can be useful for scripting that you only need in one place.
 

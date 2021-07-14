@@ -14,13 +14,12 @@
 package collections
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/gohugoio/hugo/deps"
 
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 type StructWithSlice struct {
@@ -33,12 +32,12 @@ type StructWithSlicePointers []*StructWithSlice
 func TestComplement(t *testing.T) {
 	t.Parallel()
 
-	assert := require.New(t)
+	c := qt.New(t)
 
 	ns := New(&deps.Deps{})
 
-	s1 := []TstX{TstX{A: "a"}, TstX{A: "b"}, TstX{A: "d"}, TstX{A: "e"}}
-	s2 := []TstX{TstX{A: "b"}, TstX{A: "e"}}
+	s1 := []TstX{{A: "a"}, {A: "b"}, {A: "d"}, {A: "e"}}
+	s2 := []TstX{{A: "b"}, {A: "e"}}
 
 	xa, xb, xd, xe := &StructWithSlice{A: "a"}, &StructWithSlice{A: "b"}, &StructWithSlice{A: "d"}, &StructWithSlice{A: "e"}
 
@@ -58,29 +57,33 @@ func TestComplement(t *testing.T) {
 		{[]interface{}{"a", "b", nil}, []interface{}{[]string{"a", "d"}}, []interface{}{"b", nil}},
 		{[]int{1, 2, 3, 4, 5}, []interface{}{[]int{1, 3}, []string{"a", "b"}, []int{1, 2}}, []int{4, 5}},
 		{[]int{1, 2, 3, 4, 5}, []interface{}{[]int64{1, 3}}, []int{2, 4, 5}},
-		{s1, []interface{}{s2}, []TstX{TstX{A: "a"}, TstX{A: "d"}}},
+		{s1, []interface{}{s2}, []TstX{{A: "a"}, {A: "d"}}},
 		{sp1, []interface{}{sp2}, []*StructWithSlice{xa, xd}},
 		{sp1_2, []interface{}{sp2_2}, StructWithSlicePointers{xa, xd}},
 
 		// Errors
 		{[]string{"a", "b", "c"}, []interface{}{"error"}, false},
 		{"error", []interface{}{[]string{"c", "d"}, []string{"a", "b"}}, false},
-		{[]string{"a", "b", "c"}, []interface{}{[][]string{[]string{"c", "d"}}}, false},
-		{[]interface{}{[][]string{[]string{"c", "d"}}}, []interface{}{[]string{"c", "d"}, []string{"a", "b"}}, false},
+		{[]string{"a", "b", "c"}, []interface{}{[][]string{{"c", "d"}}}, false},
+		{
+			[]interface{}{[][]string{{"c", "d"}}},
+			[]interface{}{[]string{"c", "d"}, []string{"a", "b"}},
+			[]interface{}{[][]string{{"c", "d"}}},
+		},
 	} {
 
-		errMsg := fmt.Sprintf("[%d]", i)
+		errMsg := qt.Commentf("[%d]", i)
 
 		args := append(test.t, test.s)
 
 		result, err := ns.Complement(args...)
 
 		if b, ok := test.expected.(bool); ok && !b {
-			require.Error(t, err, errMsg)
+			c.Assert(err, qt.Not(qt.IsNil), errMsg)
 			continue
 		}
 
-		require.NoError(t, err, errMsg)
+		c.Assert(err, qt.IsNil, errMsg)
 
 		if !reflect.DeepEqual(test.expected, result) {
 			t.Fatalf("%s got\n%T: %v\nexpected\n%T: %v", errMsg, result, result, test.expected, test.expected)
@@ -88,8 +91,7 @@ func TestComplement(t *testing.T) {
 	}
 
 	_, err := ns.Complement()
-	assert.Error(err)
+	c.Assert(err, qt.Not(qt.IsNil))
 	_, err = ns.Complement([]string{"a", "b"})
-	assert.Error(err)
-
+	c.Assert(err, qt.Not(qt.IsNil))
 }

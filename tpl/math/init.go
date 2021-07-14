@@ -64,6 +64,20 @@ func init() {
 			},
 		)
 
+		ns.AddMethodMapping(ctx.Max,
+			nil,
+			[][2]string{
+				{"{{math.Max 1 2 }}", "2"},
+			},
+		)
+
+		ns.AddMethodMapping(ctx.Min,
+			nil,
+			[][2]string{
+				{"{{math.Min 1 2 }}", "1"},
+			},
+		)
+
 		ns.AddMethodMapping(ctx.Mod,
 			[]string{"mod"},
 			[][2]string{
@@ -85,10 +99,24 @@ func init() {
 			},
 		)
 
+		ns.AddMethodMapping(ctx.Pow,
+			[]string{"pow"},
+			[][2]string{
+				{"{{math.Pow 2 3}}", "8"},
+			},
+		)
+
 		ns.AddMethodMapping(ctx.Round,
 			nil,
 			[][2]string{
 				{"{{math.Round 1.5}}", "2"},
+			},
+		)
+
+		ns.AddMethodMapping(ctx.Sqrt,
+			nil,
+			[][2]string{
+				{"{{math.Sqrt 81}}", "9"},
 			},
 		)
 
@@ -100,7 +128,6 @@ func init() {
 		)
 
 		return ns
-
 	}
 
 	internal.AddTemplateFuncsNamespace(f)

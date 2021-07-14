@@ -30,6 +30,9 @@ See [`.Scratch`](/functions/scratch/) for page-scoped, writable variables.
 .AlternativeOutputFormats
 : contains all alternative formats for a given page; this variable is especially useful `link rel` list in your site's `<head>`. (See [Output Formats](/templates/output-formats/).)
 
+.Aliases
+: aliases of this page
+
 .Content
 : the content itself, defined below the front matter.
 
@@ -69,6 +72,9 @@ See [`.Scratch`](/functions/scratch/) for page-scoped, writable variables.
 .IsPage
 : always `true` for regular content pages.
 
+.IsSection
+: `true` if [`.Kind`](/templates/section-templates/#page-kinds) is `section`.
+
 .IsTranslated
 : `true` if there are translations to display.
 
@@ -76,14 +82,10 @@ See [`.Scratch`](/functions/scratch/) for page-scoped, writable variables.
 : the meta keywords for the content.
 
 .Kind
-: the page's *kind*. Possible return values are `page`, `home`, `section`, `taxonomy`, or `taxonomyTerm`. Note that there are also `RSS`, `sitemap`, `robotsTXT`, and `404` kinds, but these are only available during the rendering of each of these respective page's kind and therefore *not* available in any of the `Pages` collections.
-
-.Lang
-: language taken from the language extension notation.
+: the page's *kind*. Possible return values are `page`, `home`, `section`, `taxonomy`, or `term`. Note that there are also `RSS`, `sitemap`, `robotsTXT`, and `404` kinds, but these are only available during the rendering of each of these respective page's kind and therefore *not* available in any of the `Pages` collections.
 
 .Language
-: a language object that points to the language's definition in the site
-`config`.
+: a language object that points to the language's definition in the site `config`. `.Language.Lang` gives you the language code.
 
 .Lastmod
 : the date the content was last modified. `.Lastmod` pulls from the `lastmod` field in a content's front matter.
@@ -96,14 +98,11 @@ See also `.ExpiryDate`, `.Date`, `.PublishDate`, and [`.GitInfo`][gitinfo].
 .LinkTitle
 : access when creating links to the content. If set, Hugo will use the `linktitle` from the front matter before `title`.
 
-.Next (deprecated)
-: In older Hugo versions this pointer went the wrong direction. Please use `.PrevPage` instead.
-
-.NextPage
-: Pointer to the next [regular page](/variables/site/#site-pages) (sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath)). Example: `{{if .NextPage}}{{.NextPage.Permalink}}{{end}}`.
+.Next
+: Points up to the next [regular page](/variables/site/#site-pages) (sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath)). Example: `{{with .Next}}{{.Permalink}}{{end}}`. Calling `.Next` from the first page returns `nil`.
 
 .NextInSection
-: Pointer to the next [regular page](/variables/site/#site-pages) within the same section. Pages are sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath). Example: `{{if .NextInSection}}{{.NextInSection.Permalink}}{{end}}`.
+: Points up to the next [regular page](/variables/site/#site-pages) below the same top level section (e.g. in `/blog`)). Pages are sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath). Example: `{{with .NextInSection}}{{.Permalink}}{{end}}`. Calling `.NextInSection` from the first page returns `nil`.
 
 .OutputFormats
 : contains all formats, including the current format, for a given page. Can be combined the with [`.Get` function](/functions/get/) to grab a specific format. (See [Output Formats](/templates/output-formats/).)
@@ -119,29 +118,29 @@ See also `.ExpiryDate`, `.Date`, `.PublishDate`, and [`.GitInfo`][gitinfo].
 : the Page content stripped of HTML tags and presented as a string.
 
 .PlainWords
-: the Page content stripped of HTML as a `[]string` using Go's [`strings.Fields`](https://golang.org/pkg/strings/#Fields) to split `.Plain` into a slice.
+: the slice of strings that results from splitting .Plain into words, as defined in Go's [strings.Fields](https://golang.org/pkg/strings/#Fields).
 
-.Prev (deprecated)
-: In older Hugo versions this pointer went the wrong direction. Please use `.NextPage` instead.
-
-.PrevPage
-: Pointer to the previous [regular page](/variables/site/#site-pages) (sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath)). Example: `{{if .PrevPage}}{{.PrevPage.Permalink}}{{end}}`.
+.Prev
+: Points down to the previous [regular page](/variables/site/#site-pages) (sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath)). Example: `{{if .Prev}}{{.Prev.Permalink}}{{end}}`.  Calling `.Prev` from the last page returns `nil`.
 
 .PrevInSection
-: Pointer to the previous [regular page](/variables/site/#site-pages) within the same section. Pages are sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath). Example: `{{if .PrevInSection}}{{.PrevInSection.Permalink}}{{end}}`.
+: Points down to the previous [regular page](/variables/site/#site-pages) below the same top level section (e.g. `/blog`). Pages are sorted by Hugo's [default sort](/templates/lists#default-weight-date-linktitle-filepath). Example: `{{if .PrevInSection}}{{.PrevInSection.Permalink}}{{end}}`.  Calling `.PrevInSection` from the last page returns `nil`.
 
 .PublishDate
 : the date on which the content was or will be published; `.Publishdate` pulls from the `publishdate` field in a content's front matter. See also `.ExpiryDate`, `.Date`, and `.Lastmod`.
 
-.RSSLink
-: link to the taxonomies' RSS link.
+.RSSLink (deprecated)
+: link to the page's RSS feed. This is deprecated. You should instead do something like this: `{{ with .OutputFormats.Get "RSS" }}{{ .RelPermalink }}{{ end }}`.
 
 .RawContent
 : raw markdown content without the front matter. Useful with [remarkjs.com](
-http://remarkjs.com)
+https://remarkjs.com)
 
 .ReadingTime
 : the estimated time, in minutes, it takes to read the content.
+
+.Resources
+: resources such as images and CSS that are associated with this page
 
 .Ref
 : returns the permalink for a given reference (e.g., `.Ref "sample.md"`).  `.Ref` does *not* handle in-page fragments correctly. See [Cross References](/content-management/cross-references/).
@@ -156,8 +155,14 @@ http://remarkjs.com)
 .Site
 : see [Site Variables](/variables/site/).
 
+.Sites
+: returns all sites (languages). A typical use case would be to link back to the main language: `<a href="{{ .Sites.First.Home.RelPermalink }}">...</a>`.
+
+.Sites.First
+: returns the site for the first language. If this is not a multilingual setup, it will return itself.
+
 .Summary
-: a generated summary of the content for easily showing a snippet in a summary view. The breakpoint can be set manually by inserting <code>&lt;!&#x2d;&#x2d;more&#x2d;&#x2d;&gt;</code> at the appropriate place in the content page. See [Content Summaries](/content-management/summaries/) for more details.
+: a generated summary of the content for easily showing a snippet in a summary view. The breakpoint can be set manually by inserting <code>&lt;!&#x2d;&#x2d;more&#x2d;&#x2d;&gt;</code> at the appropriate place in the content page, or the summary can be written independent of the page text.  See [Content Summaries](/content-management/summaries/) for more details.
 
 .TableOfContents
 : the rendered [table of contents](/content-management/toc/) for the page.
@@ -168,17 +173,17 @@ http://remarkjs.com)
 .Translations
 : a list of translated versions of the current page. See [Multilingual Mode](/content-management/multilingual/) for more information.
 
+.TranslationKey
+: the key used to map language translations of the current page. See [Multilingual Mode](/content-management/multilingual/) for more information.
+
 .Truncated
 : a boolean, `true` if the `.Summary` is truncated. Useful for showing a "Read more..." link only when necessary.  See [Summaries](/content-management/summaries/) for more information.
 
 .Type
-: the [content type](/content-management/types/) of the content (e.g., `post`).
+: the [content type](/content-management/types/) of the content (e.g., `posts`).
 
-.URL
-: the URL for the page relative to the web root. Note that a `url` set directly in front matter overrides the default relative URL for the rendered page.
-
-.UniqueID
-: the MD5-checksum of the content file's path.
+.UniqueID (deprecated)
+: the MD5-checksum of the content file's path. This variable is deprecated and will be removed, use `.File.UniqueID` instead.
 
 .Weight
 : assigned weight (in the front matter) to this content, used in sorting.
@@ -199,7 +204,7 @@ aliased form `.Pages`.
 
 ### `.Pages` compared to `.Site.Pages`
 
-{{< readfile file="/content/en/readfiles/pages-vs-site-pages.md" markdown="true" >}}
+{{< getcontent path="readfiles/pages-vs-site-pages.md" >}}
 
 ## Page-level Params
 

@@ -11,16 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package errors contains common Hugo errors and error related utilities.
+// Package herrors contains common Hugo errors and error related utilities.
 package herrors
 
 import (
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/gohugoio/hugo/common/text"
-	"github.com/gohugoio/hugo/helpers"
 
 	"github.com/spf13/afero"
 )
@@ -172,12 +172,16 @@ func chromaLexerFromType(fileType string) string {
 	return fileType
 }
 
+func extNoDelimiter(filename string) string {
+	return strings.TrimPrefix(filepath.Ext(filename), ".")
+}
+
 func chromaLexerFromFilename(filename string) string {
 	if strings.Contains(filename, "layouts") {
 		return "go-html-template"
 	}
 
-	ext := helpers.ExtNoDelimiter(filename)
+	ext := extNoDelimiter(filename)
 	return chromaLexerFromType(ext)
 }
 
@@ -202,7 +206,7 @@ func locateError(r io.Reader, le FileError, matches LineMatcherFn) ErrorContext 
 
 	lines := strings.Split(string(b), "\n")
 
-	if le != nil && lepos.ColumnNumber >= 0 {
+	if lepos.ColumnNumber >= 0 {
 		pos.ColumnNumber = lepos.ColumnNumber
 	}
 

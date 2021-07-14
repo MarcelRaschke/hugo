@@ -16,18 +16,51 @@ package pageparser
 import (
 	"bytes"
 	"fmt"
+	"regexp"
+	"strconv"
 )
 
 type Item struct {
-	Type ItemType
-	Pos  int
-	Val  []byte
+	Type     ItemType
+	Pos      int
+	Val      []byte
+	isString bool
 }
 
 type Items []Item
 
 func (i Item) ValStr() string {
 	return string(i.Val)
+}
+
+func (i Item) ValTyped() interface{} {
+	str := i.ValStr()
+	if i.isString {
+		// A quoted value that is a string even if it looks like a number etc.
+		return str
+	}
+
+	if boolRe.MatchString(str) {
+		return str == "true"
+	}
+
+	if intRe.MatchString(str) {
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			return str
+		}
+		return num
+	}
+
+	if floatRe.MatchString(str) {
+		num, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			return str
+		}
+		return num
+	}
+
+	return str
 }
 
 func (i Item) IsText() bool {
@@ -107,12 +140,12 @@ const (
 	tEOF
 
 	// page items
-	TypeHTMLStart          // document starting with < as first non-whitespace
 	TypeLeadSummaryDivider // <!--more-->,  # more
 	TypeFrontMatterYAML
 	TypeFrontMatterTOML
 	TypeFrontMatterJSON
 	TypeFrontMatterORG
+	TypeEmoji
 	TypeIgnore // // The BOM Unicode byte order marker and possibly others
 
 	// shortcode items
@@ -130,4 +163,10 @@ const (
 
 	// preserved for later - keywords come after this
 	tKeywordMarker
+)
+
+var (
+	boolRe  = regexp.MustCompile(`^(true$)|(false$)`)
+	intRe   = regexp.MustCompile(`^[-+]?\d+$`)
+	floatRe = regexp.MustCompile(`^[-+]?\d*\.\d+$`)
 )

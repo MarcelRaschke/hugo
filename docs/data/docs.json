@@ -2,21 +2,16 @@
   "chroma": {
     "lexers": [
       {
+        "Name": "ABAP",
+        "Aliases": [
+          "ABAP",
+          "abap"
+        ]
+      },
+      {
         "Name": "ABNF",
         "Aliases": [
           "abnf"
-        ]
-      },
-      {
-        "Name": "ANTLR",
-        "Aliases": [
-          "antlr"
-        ]
-      },
-      {
-        "Name": "APL",
-        "Aliases": [
-          "apl"
         ]
       },
       {
@@ -45,9 +40,22 @@
         ]
       },
       {
+        "Name": "AL",
+        "Aliases": [
+          "al",
+          "dal"
+        ]
+      },
+      {
         "Name": "Angular2",
         "Aliases": [
           "ng2"
+        ]
+      },
+      {
+        "Name": "ANTLR",
+        "Aliases": [
+          "antlr"
         ]
       },
       {
@@ -61,9 +69,22 @@
         ]
       },
       {
+        "Name": "APL",
+        "Aliases": [
+          "apl"
+        ]
+      },
+      {
         "Name": "AppleScript",
         "Aliases": [
           "applescript"
+        ]
+      },
+      {
+        "Name": "Arduino",
+        "Aliases": [
+          "arduino",
+          "ino"
         ]
       },
       {
@@ -73,12 +94,6 @@
           "gawk",
           "mawk",
           "nawk"
-        ]
-      },
-      {
-        "Name": "BNF",
-        "Aliases": [
-          "bnf"
         ]
       },
       {
@@ -108,6 +123,7 @@
           "bashrc",
           "ebuild",
           "eclass",
+          "env",
           "exheres-0",
           "exlib",
           "ksh",
@@ -128,6 +144,13 @@
         ]
       },
       {
+        "Name": "BibTeX",
+        "Aliases": [
+          "bib",
+          "bibtex"
+        ]
+      },
+      {
         "Name": "BlitzBasic",
         "Aliases": [
           "b3d",
@@ -135,6 +158,12 @@
           "blitzbasic",
           "bplus",
           "decls"
+        ]
+      },
+      {
+        "Name": "BNF",
+        "Aliases": [
+          "bnf"
         ]
       },
       {
@@ -150,7 +179,8 @@
         "Aliases": [
           "c",
           "h",
-          "idc"
+          "idc",
+          "x[bp]m"
         ]
       },
       {
@@ -179,34 +209,18 @@
         ]
       },
       {
-        "Name": "CFEngine3",
+        "Name": "Caddyfile",
         "Aliases": [
-          "cf",
-          "cf3",
-          "cfengine3"
+          "caddy",
+          "caddyfile"
         ]
       },
       {
-        "Name": "CMake",
+        "Name": "Caddyfile Directives",
         "Aliases": [
-          "cmake",
-          "txt"
-        ]
-      },
-      {
-        "Name": "COBOL",
-        "Aliases": [
-          "COB",
-          "CPY",
-          "cob",
-          "cobol",
-          "cpy"
-        ]
-      },
-      {
-        "Name": "CSS",
-        "Aliases": [
-          "css"
+          "caddy-d",
+          "caddyfile-d",
+          "caddyfile-directives"
         ]
       },
       {
@@ -226,6 +240,20 @@
         "Name": "Ceylon",
         "Aliases": [
           "ceylon"
+        ]
+      },
+      {
+        "Name": "CFEngine3",
+        "Aliases": [
+          "cf",
+          "cf3",
+          "cfengine3"
+        ]
+      },
+      {
+        "Name": "cfstatement",
+        "Aliases": [
+          "cfs"
         ]
       },
       {
@@ -249,6 +277,23 @@
         "Aliases": [
           "clj",
           "clojure"
+        ]
+      },
+      {
+        "Name": "CMake",
+        "Aliases": [
+          "cmake",
+          "txt"
+        ]
+      },
+      {
+        "Name": "COBOL",
+        "Aliases": [
+          "COB",
+          "CPY",
+          "cob",
+          "cobol",
+          "cpy"
         ]
       },
       {
@@ -282,6 +327,12 @@
         ]
       },
       {
+        "Name": "CSS",
+        "Aliases": [
+          "css"
+        ]
+      },
+      {
         "Name": "Cython",
         "Aliases": [
           "cython",
@@ -292,9 +343,10 @@
         ]
       },
       {
-        "Name": "DTD",
+        "Name": "D",
         "Aliases": [
-          "dtd"
+          "d",
+          "di"
         ]
       },
       {
@@ -323,6 +375,20 @@
         "Aliases": [
           "docker",
           "dockerfile"
+        ]
+      },
+      {
+        "Name": "DTD",
+        "Aliases": [
+          "dtd"
+        ]
+      },
+      {
+        "Name": "Dylan",
+        "Aliases": [
+          "dyl",
+          "dylan",
+          "intr"
         ]
       },
       {
@@ -365,14 +431,6 @@
         ]
       },
       {
-        "Name": "FSharp",
-        "Aliases": [
-          "fs",
-          "fsharp",
-          "fsi"
-        ]
-      },
-      {
         "Name": "Factor",
         "Aliases": [
           "factor"
@@ -391,7 +449,8 @@
         "Aliases": [
           "forth",
           "frt",
-          "fs"
+          "fs",
+          "fth"
         ]
       },
       {
@@ -402,6 +461,22 @@
           "f03",
           "f90",
           "fortran"
+        ]
+      },
+      {
+        "Name": "FortranFixed",
+        "Aliases": [
+          "F",
+          "f",
+          "fortranfixed"
+        ]
+      },
+      {
+        "Name": "FSharp",
+        "Aliases": [
+          "fs",
+          "fsharp",
+          "fsi"
         ]
       },
       {
@@ -418,15 +493,6 @@
         "Aliases": [
           "gd",
           "gdscript"
-        ]
-      },
-      {
-        "Name": "GLSL",
-        "Aliases": [
-          "frag",
-          "geo",
-          "glsl",
-          "vert"
         ]
       },
       {
@@ -449,6 +515,26 @@
         "Name": "Genshi Text",
         "Aliases": [
           "genshitext"
+        ]
+      },
+      {
+        "Name": "Gherkin",
+        "Aliases": [
+          "Cucumber",
+          "FEATURE",
+          "Gherkin",
+          "cucumber",
+          "feature",
+          "gherkin"
+        ]
+      },
+      {
+        "Name": "GLSL",
+        "Aliases": [
+          "frag",
+          "geo",
+          "glsl",
+          "vert"
         ]
       },
       {
@@ -479,6 +565,25 @@
         ]
       },
       {
+        "Name": "GraphQL",
+        "Aliases": [
+          "gql",
+          "graphql",
+          "graphqls"
+        ]
+      },
+      {
+        "Name": "Groff",
+        "Aliases": [
+          "1p",
+          "3pm",
+          "[1-9]",
+          "groff",
+          "man",
+          "nroff"
+        ]
+      },
+      {
         "Name": "Groovy",
         "Aliases": [
           "gradle",
@@ -486,24 +591,10 @@
         ]
       },
       {
-        "Name": "HTML",
-        "Aliases": [
-          "htm",
-          "html",
-          "xhtml",
-          "xslt"
-        ]
-      },
-      {
-        "Name": "HTTP",
-        "Aliases": [
-          "http"
-        ]
-      },
-      {
         "Name": "Handlebars",
         "Aliases": [
-          "handlebars"
+          "handlebars",
+          "hbs"
         ]
       },
       {
@@ -522,9 +613,36 @@
         ]
       },
       {
+        "Name": "HCL",
+        "Aliases": [
+          "hcl"
+        ]
+      },
+      {
         "Name": "Hexdump",
         "Aliases": [
           "hexdump"
+        ]
+      },
+      {
+        "Name": "HLB",
+        "Aliases": [
+          "hlb"
+        ]
+      },
+      {
+        "Name": "HTML",
+        "Aliases": [
+          "htm",
+          "html",
+          "xhtml",
+          "xslt"
+        ]
+      },
+      {
+        "Name": "HTTP",
+        "Aliases": [
+          "http"
         ]
       },
       {
@@ -535,20 +653,29 @@
         ]
       },
       {
-        "Name": "INI",
-        "Aliases": [
-          "cfg",
-          "dosini",
-          "gitconfig",
-          "inf",
-          "ini"
-        ]
-      },
-      {
         "Name": "Idris",
         "Aliases": [
           "idr",
           "idris"
+        ]
+      },
+      {
+        "Name": "Igor",
+        "Aliases": [
+          "igor",
+          "igorpro",
+          "ipf"
+        ]
+      },
+      {
+        "Name": "INI",
+        "Aliases": [
+          "cfg",
+          "dosini",
+          "editorconfig",
+          "gitconfig",
+          "inf",
+          "ini"
         ]
       },
       {
@@ -558,16 +685,10 @@
         ]
       },
       {
-        "Name": "JSON",
+        "Name": "J",
         "Aliases": [
-          "json"
-        ]
-      },
-      {
-        "Name": "JSX",
-        "Aliases": [
-          "jsx",
-          "react"
+          "ijs",
+          "j"
         ]
       },
       {
@@ -581,7 +702,14 @@
         "Aliases": [
           "javascript",
           "js",
-          "jsm"
+          "jsm",
+          "mjs"
+        ]
+      },
+      {
+        "Name": "JSON",
+        "Aliases": [
+          "json"
         ]
       },
       {
@@ -605,17 +733,17 @@
         ]
       },
       {
-        "Name": "LLVM",
-        "Aliases": [
-          "ll",
-          "llvm"
-        ]
-      },
-      {
         "Name": "Lighttpd configuration file",
         "Aliases": [
           "lighttpd",
           "lighty"
+        ]
+      },
+      {
+        "Name": "LLVM",
+        "Aliases": [
+          "ll",
+          "llvm"
         ]
       },
       {
@@ -630,6 +758,14 @@
         "Aliases": [
           "mako",
           "mao"
+        ]
+      },
+      {
+        "Name": "markdown",
+        "Aliases": [
+          "markdown",
+          "md",
+          "mkd"
         ]
       },
       {
@@ -654,6 +790,25 @@
         ]
       },
       {
+        "Name": "Matlab",
+        "Aliases": [
+          "m",
+          "matlab"
+        ]
+      },
+      {
+        "Name": "mcfunction",
+        "Aliases": [
+          "mcfunction"
+        ]
+      },
+      {
+        "Name": "Metal",
+        "Aliases": [
+          "metal"
+        ]
+      },
+      {
         "Name": "MiniZinc",
         "Aliases": [
           "MZN",
@@ -661,6 +816,12 @@
           "fzn",
           "minizinc",
           "mzn"
+        ]
+      },
+      {
+        "Name": "MLIR",
+        "Aliases": [
+          "mlir"
         ]
       },
       {
@@ -687,17 +848,17 @@
         ]
       },
       {
-        "Name": "MySQL",
-        "Aliases": [
-          "mysql",
-          "sql"
-        ]
-      },
-      {
         "Name": "Myghty",
         "Aliases": [
           "myghty",
           "myt"
+        ]
+      },
+      {
+        "Name": "MySQL",
+        "Aliases": [
+          "mysql",
+          "sql"
         ]
       },
       {
@@ -737,16 +898,6 @@
         ]
       },
       {
-        "Name": "OCaml",
-        "Aliases": [
-          "ml",
-          "mli",
-          "mll",
-          "mly",
-          "ocaml"
-        ]
-      },
-      {
         "Name": "Objective-C",
         "Aliases": [
           "h",
@@ -755,6 +906,16 @@
           "objc",
           "objective-c",
           "objectivec"
+        ]
+      },
+      {
+        "Name": "OCaml",
+        "Aliases": [
+          "ml",
+          "mli",
+          "mll",
+          "mly",
+          "ocaml"
         ]
       },
       {
@@ -779,30 +940,6 @@
         ]
       },
       {
-        "Name": "PHP",
-        "Aliases": [
-          "inc",
-          "php",
-          "php3",
-          "php4",
-          "php5",
-          "php[345]"
-        ]
-      },
-      {
-        "Name": "PL/pgSQL",
-        "Aliases": [
-          "plpgsql"
-        ]
-      },
-      {
-        "Name": "POVRay",
-        "Aliases": [
-          "inc",
-          "pov"
-        ]
-      },
-      {
         "Name": "PacmanConf",
         "Aliases": [
           "conf",
@@ -819,6 +956,26 @@
         ]
       },
       {
+        "Name": "PHP",
+        "Aliases": [
+          "inc",
+          "php",
+          "php3",
+          "php4",
+          "php5",
+          "php[345]"
+        ]
+      },
+      {
+        "Name": "PHTML",
+        "Aliases": [
+          "inc",
+          "php",
+          "php[345]",
+          "phtml"
+        ]
+      },
+      {
         "Name": "Pig",
         "Aliases": [
           "pig"
@@ -832,12 +989,24 @@
         ]
       },
       {
-        "Name": "PostScript",
+        "Name": "PL/pgSQL",
         "Aliases": [
-          "eps",
-          "postscr",
-          "postscript",
-          "ps"
+          "plpgsql"
+        ]
+      },
+      {
+        "Name": "plaintext",
+        "Aliases": [
+          "no-highlight",
+          "plain",
+          "text",
+          "txt"
+        ]
+      },
+      {
+        "Name": "Pony",
+        "Aliases": [
+          "pony"
         ]
       },
       {
@@ -848,11 +1017,35 @@
         ]
       },
       {
+        "Name": "PostScript",
+        "Aliases": [
+          "eps",
+          "postscr",
+          "postscript",
+          "ps"
+        ]
+      },
+      {
+        "Name": "POVRay",
+        "Aliases": [
+          "inc",
+          "pov"
+        ]
+      },
+      {
+        "Name": "PowerQuery",
+        "Aliases": [
+          "powerquery",
+          "pq"
+        ]
+      },
+      {
         "Name": "PowerShell",
         "Aliases": [
           "posh",
           "powershell",
           "ps1",
+          "psd1",
           "psm1"
         ]
       },
@@ -863,6 +1056,12 @@
           "pl",
           "pro",
           "prolog"
+        ]
+      },
+      {
+        "Name": "PromQL",
+        "Aliases": [
+          "promql"
         ]
       },
       {
@@ -882,8 +1081,14 @@
       {
         "Name": "Python",
         "Aliases": [
+          "bazel",
+          "bzl",
+          "jy",
           "py",
+          "py3",
+          "pyi",
           "python",
+          "python3",
           "pyw",
           "sage",
           "sc",
@@ -891,10 +1096,10 @@
         ]
       },
       {
-        "Name": "Python 3",
+        "Name": "Python 2",
         "Aliases": [
-          "py3",
-          "python3"
+          "py2",
+          "python2"
         ]
       },
       {
@@ -904,6 +1109,13 @@
           "bas",
           "basic",
           "qbasic"
+        ]
+      },
+      {
+        "Name": "QML",
+        "Aliases": [
+          "qbs",
+          "qml"
         ]
       },
       {
@@ -932,6 +1144,58 @@
         "Name": "Ragel",
         "Aliases": [
           "ragel"
+        ]
+      },
+      {
+        "Name": "Raku",
+        "Aliases": [
+          "6pl",
+          "6pm",
+          "nqp",
+          "p6",
+          "p6l",
+          "p6m",
+          "perl6",
+          "pl",
+          "pl6",
+          "pm",
+          "pm6",
+          "raku",
+          "rakudoc",
+          "rakumod",
+          "rakutest",
+          "t"
+        ]
+      },
+      {
+        "Name": "react",
+        "Aliases": [
+          "jsx",
+          "react"
+        ]
+      },
+      {
+        "Name": "ReasonML",
+        "Aliases": [
+          "re",
+          "reason",
+          "reasonml",
+          "rei"
+        ]
+      },
+      {
+        "Name": "reg",
+        "Aliases": [
+          "reg",
+          "registry"
+        ]
+      },
+      {
+        "Name": "reStructuredText",
+        "Aliases": [
+          "rest",
+          "restructuredtext",
+          "rst"
         ]
       },
       {
@@ -964,29 +1228,10 @@
         ]
       },
       {
-        "Name": "SCSS",
+        "Name": "SAS",
         "Aliases": [
-          "scss"
-        ]
-      },
-      {
-        "Name": "SPARQL",
-        "Aliases": [
-          "rq",
-          "sparql"
-        ]
-      },
-      {
-        "Name": "SQL",
-        "Aliases": [
-          "sql"
-        ]
-      },
-      {
-        "Name": "SYSTEMD",
-        "Aliases": [
-          "service",
-          "systemd"
+          "SAS",
+          "sas"
         ]
       },
       {
@@ -1019,6 +1264,12 @@
         ]
       },
       {
+        "Name": "SCSS",
+        "Aliases": [
+          "scss"
+        ]
+      },
+      {
         "Name": "Smalltalk",
         "Aliases": [
           "smalltalk",
@@ -1047,6 +1298,19 @@
         ]
       },
       {
+        "Name": "SPARQL",
+        "Aliases": [
+          "rq",
+          "sparql"
+        ]
+      },
+      {
+        "Name": "SQL",
+        "Aliases": [
+          "sql"
+        ]
+      },
+      {
         "Name": "SquidConf",
         "Aliases": [
           "conf",
@@ -1056,9 +1320,66 @@
         ]
       },
       {
+        "Name": "Standard ML",
+        "Aliases": [
+          "fun",
+          "sig",
+          "sml"
+        ]
+      },
+      {
+        "Name": "Stylus",
+        "Aliases": [
+          "styl",
+          "stylus"
+        ]
+      },
+      {
+        "Name": "Svelte",
+        "Aliases": [
+          "svelte"
+        ]
+      },
+      {
         "Name": "Swift",
         "Aliases": [
           "swift"
+        ]
+      },
+      {
+        "Name": "SYSTEMD",
+        "Aliases": [
+          "automount",
+          "device",
+          "dnssd",
+          "link",
+          "mount",
+          "netdev",
+          "network",
+          "path",
+          "scope",
+          "service",
+          "slice",
+          "socket",
+          "swap",
+          "systemd",
+          "target",
+          "timer"
+        ]
+      },
+      {
+        "Name": "systemverilog",
+        "Aliases": [
+          "sv",
+          "svh",
+          "systemverilog"
+        ]
+      },
+      {
+        "Name": "TableGen",
+        "Aliases": [
+          "tablegen",
+          "td"
         ]
       },
       {
@@ -1067,12 +1388,6 @@
           "ASM",
           "asm",
           "tasm"
-        ]
-      },
-      {
-        "Name": "TOML",
-        "Aliases": [
-          "toml"
         ]
       },
       {
@@ -1087,15 +1402,6 @@
         "Aliases": [
           "csh",
           "tcsh"
-        ]
-      },
-      {
-        "Name": "TeX",
-        "Aliases": [
-          "aux",
-          "latex",
-          "tex",
-          "toc"
         ]
       },
       {
@@ -1120,9 +1426,24 @@
         ]
       },
       {
+        "Name": "TeX",
+        "Aliases": [
+          "aux",
+          "latex",
+          "tex",
+          "toc"
+        ]
+      },
+      {
         "Name": "Thrift",
         "Aliases": [
           "thrift"
+        ]
+      },
+      {
+        "Name": "TOML",
+        "Aliases": [
+          "toml"
         ]
       },
       {
@@ -1137,6 +1458,13 @@
         "Aliases": [
           "t-sql",
           "tsql"
+        ]
+      },
+      {
+        "Name": "Turing",
+        "Aliases": [
+          "tu",
+          "turing"
         ]
       },
       {
@@ -1164,7 +1492,6 @@
         "Name": "TypoScript",
         "Aliases": [
           "ts",
-          "txt",
           "typoscript"
         ]
       },
@@ -1181,6 +1508,22 @@
         ]
       },
       {
+        "Name": "VB.net",
+        "Aliases": [
+          "bas",
+          "vb",
+          "vb.net",
+          "vbnet"
+        ]
+      },
+      {
+        "Name": "verilog",
+        "Aliases": [
+          "v",
+          "verilog"
+        ]
+      },
+      {
         "Name": "VHDL",
         "Aliases": [
           "vhd",
@@ -1194,6 +1537,13 @@
           "gvimrc",
           "vim",
           "vimrc"
+        ]
+      },
+      {
+        "Name": "vue",
+        "Aliases": [
+          "vue",
+          "vuejs"
         ]
       },
       {
@@ -1230,188 +1580,589 @@
         ]
       },
       {
-        "Name": "cfstatement",
+        "Name": "YANG",
         "Aliases": [
-          "cfs"
+          "yang"
         ]
       },
       {
-        "Name": "markdown",
+        "Name": "Zig",
         "Aliases": [
-          "markdown",
-          "md",
-          "mkd"
-        ]
-      },
-      {
-        "Name": "plaintext",
-        "Aliases": [
-          "no-highlight",
-          "plain",
-          "text",
-          "txt"
-        ]
-      },
-      {
-        "Name": "reStructuredText",
-        "Aliases": [
-          "rest",
-          "restructuredtext",
-          "rst"
-        ]
-      },
-      {
-        "Name": "reg",
-        "Aliases": [
-          "reg",
-          "registry"
-        ]
-      },
-      {
-        "Name": "systemverilog",
-        "Aliases": [
-          "sv",
-          "svh",
-          "systemverilog"
-        ]
-      },
-      {
-        "Name": "verilog",
-        "Aliases": [
-          "v",
-          "verilog"
+          "zig"
         ]
       }
     ]
   },
+  "config": {
+    "markup": {
+      "defaultMarkdownHandler": "goldmark",
+      "highlight": {
+        "style": "monokai",
+        "codeFences": true,
+        "noClasses": true,
+        "lineNos": false,
+        "lineNumbersInTable": true,
+        "anchorLineNos": false,
+        "lineAnchors": "",
+        "lineNoStart": 1,
+        "hl_Lines": "",
+        "tabWidth": 4,
+        "guessSyntax": false
+      },
+      "tableOfContents": {
+        "startLevel": 2,
+        "endLevel": 3,
+        "ordered": false
+      },
+      "goldmark": {
+        "renderer": {
+          "hardWraps": false,
+          "xhtml": false,
+          "unsafe": false
+        },
+        "parser": {
+          "autoHeadingID": true,
+          "autoHeadingIDType": "github",
+          "attribute": {
+            "title": true,
+            "block": false
+          }
+        },
+        "extensions": {
+          "typographer": true,
+          "footnote": true,
+          "definitionList": true,
+          "table": true,
+          "strikethrough": true,
+          "linkify": true,
+          "taskList": true
+        }
+      },
+      "blackFriday": {
+        "smartypants": true,
+        "smartypantsQuotesNBSP": false,
+        "angledQuotes": false,
+        "fractions": true,
+        "hrefTargetBlank": false,
+        "nofollowLinks": false,
+        "noreferrerLinks": false,
+        "smartDashes": true,
+        "latexDashes": true,
+        "taskLists": true,
+        "plainIDAnchors": true,
+        "extensions": null,
+        "extensionsMask": null,
+        "skipHTML": false,
+        "footnoteAnchorPrefix": "",
+        "footnoteReturnLinkContents": ""
+      },
+      "asciidocExt": {
+        "backend": "html5",
+        "extensions": [],
+        "attributes": {},
+        "noHeaderOrFooter": true,
+        "safeMode": "unsafe",
+        "sectionNumbers": false,
+        "verbose": false,
+        "trace": false,
+        "failureLevel": "fatal",
+        "workingFolderCurrent": false,
+        "preserveTOC": false
+      }
+    },
+    "mergeStrategy": {
+      "build": {
+        "_merge": "none"
+      },
+      "caches": {
+        "_merge": "none"
+      },
+      "frontmatter": {
+        "_merge": "none"
+      },
+      "imaging": {
+        "_merge": "none"
+      },
+      "languages": {
+        "_merge": "none",
+        "en": {
+          "_merge": "none",
+          "menus": {
+            "_merge": "shallow"
+          },
+          "params": {
+            "_merge": "deep"
+          }
+        }
+      },
+      "markup": {
+        "_merge": "none"
+      },
+      "mediatypes": {
+        "_merge": "shallow"
+      },
+      "menus": {
+        "_merge": "shallow"
+      },
+      "minify": {
+        "_merge": "none"
+      },
+      "module": {
+        "_merge": "none"
+      },
+      "outputformats": {
+        "_merge": "shallow"
+      },
+      "params": {
+        "_merge": "deep"
+      },
+      "permalinks": {
+        "_merge": "none"
+      },
+      "related": {
+        "_merge": "none"
+      },
+      "sitemap": {
+        "_merge": "none"
+      },
+      "taxonomies": {
+        "_merge": "none"
+      }
+    },
+    "minify": {
+      "minifyOutput": false,
+      "disableHTML": false,
+      "disableCSS": false,
+      "disableJS": false,
+      "disableJSON": false,
+      "disableSVG": false,
+      "disableXML": false,
+      "tdewolff": {
+        "html": {
+          "keepComments": false,
+          "keepConditionalComments": true,
+          "keepDefaultAttrVals": true,
+          "keepDocumentTags": true,
+          "keepEndTags": true,
+          "keepQuotes": false,
+          "keepWhitespace": false
+        },
+        "css": {
+          "keepCSS2": true,
+          "precision": 0
+        },
+        "js": {
+          "precision": 0,
+          "keepVarNames": false
+        },
+        "json": {
+          "precision": 0
+        },
+        "svg": {
+          "precision": 0
+        },
+        "xml": {
+          "keepWhitespace": false
+        }
+      }
+    }
+  },
   "media": {
     "types": [
       {
-        "type": "application/javascript",
-        "string": "application/javascript",
         "mainType": "application",
         "subType": "javascript",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "js",
+          "fullSuffix": ".js"
+        },
+        "type": "application/javascript",
+        "string": "application/javascript",
         "suffixes": [
           "js"
         ]
       },
       {
-        "type": "application/json",
-        "string": "application/json",
         "mainType": "application",
         "subType": "json",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "json",
+          "fullSuffix": ".json"
+        },
+        "type": "application/json",
+        "string": "application/json",
         "suffixes": [
           "json"
         ]
       },
       {
-        "type": "application/octet-stream",
-        "string": "application/octet-stream",
         "mainType": "application",
-        "subType": "octet-stream",
-        "delimiter": "",
-        "suffixes": null
+        "subType": "manifest",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "webmanifest",
+          "fullSuffix": ".webmanifest"
+        },
+        "type": "application/manifest+json",
+        "string": "application/manifest+json",
+        "suffixes": [
+          "webmanifest"
+        ]
       },
       {
-        "type": "application/rss+xml",
-        "string": "application/rss+xml",
+        "mainType": "application",
+        "subType": "octet-stream",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "",
+          "fullSuffix": ""
+        },
+        "type": "application/octet-stream",
+        "string": "application/octet-stream",
+        "suffixes": [
+          ""
+        ]
+      },
+      {
         "mainType": "application",
         "subType": "rss",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "xml",
+          "fullSuffix": ".xml"
+        },
+        "type": "application/rss+xml",
+        "string": "application/rss+xml",
         "suffixes": [
           "xml"
         ]
       },
       {
-        "type": "application/xml",
-        "string": "application/xml",
+        "mainType": "application",
+        "subType": "toml",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "toml",
+          "fullSuffix": ".toml"
+        },
+        "type": "application/toml",
+        "string": "application/toml",
+        "suffixes": [
+          "toml"
+        ]
+      },
+      {
+        "mainType": "application",
+        "subType": "typescript",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "ts",
+          "fullSuffix": ".ts"
+        },
+        "type": "application/typescript",
+        "string": "application/typescript",
+        "suffixes": [
+          "ts"
+        ]
+      },
+      {
         "mainType": "application",
         "subType": "xml",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "xml",
+          "fullSuffix": ".xml"
+        },
+        "type": "application/xml",
+        "string": "application/xml",
         "suffixes": [
           "xml"
         ]
       },
       {
-        "type": "image/svg+xml",
-        "string": "image/svg+xml",
+        "mainType": "application",
+        "subType": "yaml",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "yaml",
+          "fullSuffix": ".yaml"
+        },
+        "type": "application/yaml",
+        "string": "application/yaml",
+        "suffixes": [
+          "yaml",
+          "yml"
+        ]
+      },
+      {
+        "mainType": "image",
+        "subType": "jpeg",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "jpg",
+          "fullSuffix": ".jpg"
+        },
+        "type": "image/jpeg",
+        "string": "image/jpeg",
+        "suffixes": [
+          "jpg",
+          "jpeg"
+        ]
+      },
+      {
+        "mainType": "image",
+        "subType": "png",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "png",
+          "fullSuffix": ".png"
+        },
+        "type": "image/png",
+        "string": "image/png",
+        "suffixes": [
+          "png"
+        ]
+      },
+      {
         "mainType": "image",
         "subType": "svg",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "svg",
+          "fullSuffix": ".svg"
+        },
+        "type": "image/svg+xml",
+        "string": "image/svg+xml",
         "suffixes": [
           "svg"
         ]
       },
       {
-        "type": "text/calendar",
-        "string": "text/calendar",
+        "mainType": "image",
+        "subType": "webp",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "webp",
+          "fullSuffix": ".webp"
+        },
+        "type": "image/webp",
+        "string": "image/webp",
+        "suffixes": [
+          "webp"
+        ]
+      },
+      {
         "mainType": "text",
         "subType": "calendar",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "ics",
+          "fullSuffix": ".ics"
+        },
+        "type": "text/calendar",
+        "string": "text/calendar",
         "suffixes": [
           "ics"
         ]
       },
       {
-        "type": "text/css",
-        "string": "text/css",
         "mainType": "text",
         "subType": "css",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "css",
+          "fullSuffix": ".css"
+        },
+        "type": "text/css",
+        "string": "text/css",
         "suffixes": [
           "css"
         ]
       },
       {
-        "type": "text/csv",
-        "string": "text/csv",
         "mainType": "text",
         "subType": "csv",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "csv",
+          "fullSuffix": ".csv"
+        },
+        "type": "text/csv",
+        "string": "text/csv",
         "suffixes": [
           "csv"
         ]
       },
       {
-        "type": "text/html",
-        "string": "text/html",
         "mainType": "text",
         "subType": "html",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "html",
+          "fullSuffix": ".html"
+        },
+        "type": "text/html",
+        "string": "text/html",
         "suffixes": [
           "html"
         ]
       },
       {
-        "type": "text/plain",
-        "string": "text/plain",
+        "mainType": "text",
+        "subType": "jsx",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "jsx",
+          "fullSuffix": ".jsx"
+        },
+        "type": "text/jsx",
+        "string": "text/jsx",
+        "suffixes": [
+          "jsx"
+        ]
+      },
+      {
         "mainType": "text",
         "subType": "plain",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "txt",
+          "fullSuffix": ".txt"
+        },
+        "type": "text/plain",
+        "string": "text/plain",
         "suffixes": [
           "txt"
         ]
       },
       {
-        "type": "text/x-sass",
-        "string": "text/x-sass",
+        "mainType": "text",
+        "subType": "tsx",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "tsx",
+          "fullSuffix": ".tsx"
+        },
+        "type": "text/tsx",
+        "string": "text/tsx",
+        "suffixes": [
+          "tsx"
+        ]
+      },
+      {
         "mainType": "text",
         "subType": "x-sass",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "sass",
+          "fullSuffix": ".sass"
+        },
+        "type": "text/x-sass",
+        "string": "text/x-sass",
         "suffixes": [
           "sass"
         ]
       },
       {
-        "type": "text/x-scss",
-        "string": "text/x-scss",
         "mainType": "text",
         "subType": "x-scss",
         "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "scss",
+          "fullSuffix": ".scss"
+        },
+        "type": "text/x-scss",
+        "string": "text/x-scss",
         "suffixes": [
           "scss"
+        ]
+      },
+      {
+        "mainType": "video",
+        "subType": "3gpp",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "3gpp",
+          "fullSuffix": ".3gpp"
+        },
+        "type": "video/3gpp",
+        "string": "video/3gpp",
+        "suffixes": [
+          "3gpp",
+          "3gp"
+        ]
+      },
+      {
+        "mainType": "video",
+        "subType": "mp4",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "mp4",
+          "fullSuffix": ".mp4"
+        },
+        "type": "video/mp4",
+        "string": "video/mp4",
+        "suffixes": [
+          "mp4"
+        ]
+      },
+      {
+        "mainType": "video",
+        "subType": "mpeg",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "mpg",
+          "fullSuffix": ".mpg"
+        },
+        "type": "video/mpeg",
+        "string": "video/mpeg",
+        "suffixes": [
+          "mpg",
+          "mpeg"
+        ]
+      },
+      {
+        "mainType": "video",
+        "subType": "ogg",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "ogv",
+          "fullSuffix": ".ogv"
+        },
+        "type": "video/ogg",
+        "string": "video/ogg",
+        "suffixes": [
+          "ogv"
+        ]
+      },
+      {
+        "mainType": "video",
+        "subType": "webm",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "webm",
+          "fullSuffix": ".webm"
+        },
+        "type": "video/webm",
+        "string": "video/webm",
+        "suffixes": [
+          "webm"
+        ]
+      },
+      {
+        "mainType": "video",
+        "subType": "x-msvideo",
+        "delimiter": ".",
+        "firstSuffix": {
+          "suffix": "avi",
+          "fullSuffix": ".avi"
+        },
+        "type": "video/x-msvideo",
+        "string": "video/x-msvideo",
+        "suffixes": [
+          "avi"
         ]
       }
     ]
@@ -1419,106 +2170,8 @@
   "output": {
     "formats": [
       {
-        "MediaType": "text/html",
-        "name": "AMP",
-        "mediaType": {
-          "type": "text/html",
-          "string": "text/html",
-          "mainType": "text",
-          "subType": "html",
-          "delimiter": ".",
-          "suffixes": [
-            "html"
-          ]
-        },
-        "path": "amp",
-        "baseName": "index",
-        "rel": "amphtml",
-        "protocol": "",
-        "isPlainText": false,
-        "isHTML": true,
-        "noUgly": false,
-        "notAlternative": false
-      },
-      {
-        "MediaType": "text/css",
-        "name": "CSS",
-        "mediaType": {
-          "type": "text/css",
-          "string": "text/css",
-          "mainType": "text",
-          "subType": "css",
-          "delimiter": ".",
-          "suffixes": [
-            "css"
-          ]
-        },
-        "path": "",
-        "baseName": "styles",
-        "rel": "stylesheet",
-        "protocol": "",
-        "isPlainText": true,
-        "isHTML": false,
-        "noUgly": false,
-        "notAlternative": true
-      },
-      {
-        "MediaType": "text/csv",
-        "name": "CSV",
-        "mediaType": {
-          "type": "text/csv",
-          "string": "text/csv",
-          "mainType": "text",
-          "subType": "csv",
-          "delimiter": ".",
-          "suffixes": [
-            "csv"
-          ]
-        },
-        "path": "",
-        "baseName": "index",
-        "rel": "alternate",
-        "protocol": "",
-        "isPlainText": true,
-        "isHTML": false,
-        "noUgly": false,
-        "notAlternative": false
-      },
-      {
-        "MediaType": "text/calendar",
-        "name": "Calendar",
-        "mediaType": {
-          "type": "text/calendar",
-          "string": "text/calendar",
-          "mainType": "text",
-          "subType": "calendar",
-          "delimiter": ".",
-          "suffixes": [
-            "ics"
-          ]
-        },
-        "path": "",
-        "baseName": "index",
-        "rel": "alternate",
-        "protocol": "webcal://",
-        "isPlainText": true,
-        "isHTML": false,
-        "noUgly": false,
-        "notAlternative": false
-      },
-      {
-        "MediaType": "text/html",
+        "mediaType": "text/html",
         "name": "HTML",
-        "mediaType": {
-          "type": "text/html",
-          "string": "text/html",
-          "mainType": "text",
-          "subType": "html",
-          "delimiter": ".",
-          "suffixes": [
-            "html"
-          ]
-        },
         "path": "",
         "baseName": "index",
         "rel": "canonical",
@@ -1526,21 +2179,41 @@
         "isPlainText": false,
         "isHTML": true,
         "noUgly": false,
-        "notAlternative": false
+        "notAlternative": false,
+        "permalinkable": true,
+        "weight": 10
       },
       {
-        "MediaType": "application/json",
-        "name": "JSON",
-        "mediaType": {
-          "type": "application/json",
-          "string": "application/json",
-          "mainType": "application",
-          "subType": "json",
-          "delimiter": ".",
-          "suffixes": [
-            "json"
-          ]
-        },
+        "mediaType": "text/html",
+        "name": "AMP",
+        "path": "amp",
+        "baseName": "index",
+        "rel": "amphtml",
+        "protocol": "",
+        "isPlainText": false,
+        "isHTML": true,
+        "noUgly": false,
+        "notAlternative": false,
+        "permalinkable": true,
+        "weight": 0
+      },
+      {
+        "mediaType": "text/css",
+        "name": "CSS",
+        "path": "",
+        "baseName": "styles",
+        "rel": "stylesheet",
+        "protocol": "",
+        "isPlainText": true,
+        "isHTML": false,
+        "noUgly": false,
+        "notAlternative": true,
+        "permalinkable": false,
+        "weight": 0
+      },
+      {
+        "mediaType": "text/csv",
+        "name": "CSV",
         "path": "",
         "baseName": "index",
         "rel": "alternate",
@@ -1548,21 +2221,41 @@
         "isPlainText": true,
         "isHTML": false,
         "noUgly": false,
-        "notAlternative": false
+        "notAlternative": false,
+        "permalinkable": false,
+        "weight": 0
       },
       {
-        "MediaType": "text/plain",
+        "mediaType": "text/calendar",
+        "name": "Calendar",
+        "path": "",
+        "baseName": "index",
+        "rel": "alternate",
+        "protocol": "webcal://",
+        "isPlainText": true,
+        "isHTML": false,
+        "noUgly": false,
+        "notAlternative": false,
+        "permalinkable": false,
+        "weight": 0
+      },
+      {
+        "mediaType": "application/json",
+        "name": "JSON",
+        "path": "",
+        "baseName": "index",
+        "rel": "alternate",
+        "protocol": "",
+        "isPlainText": true,
+        "isHTML": false,
+        "noUgly": false,
+        "notAlternative": false,
+        "permalinkable": false,
+        "weight": 0
+      },
+      {
+        "mediaType": "text/plain",
         "name": "ROBOTS",
-        "mediaType": {
-          "type": "text/plain",
-          "string": "text/plain",
-          "mainType": "text",
-          "subType": "plain",
-          "delimiter": ".",
-          "suffixes": [
-            "txt"
-          ]
-        },
         "path": "",
         "baseName": "robots",
         "rel": "alternate",
@@ -1570,21 +2263,13 @@
         "isPlainText": true,
         "isHTML": false,
         "noUgly": false,
-        "notAlternative": false
+        "notAlternative": false,
+        "permalinkable": false,
+        "weight": 0
       },
       {
-        "MediaType": "application/rss+xml",
+        "mediaType": "application/rss+xml",
         "name": "RSS",
-        "mediaType": {
-          "type": "application/rss+xml",
-          "string": "application/rss+xml",
-          "mainType": "application",
-          "subType": "rss",
-          "delimiter": ".",
-          "suffixes": [
-            "xml"
-          ]
-        },
         "path": "",
         "baseName": "index",
         "rel": "alternate",
@@ -1592,21 +2277,13 @@
         "isPlainText": false,
         "isHTML": false,
         "noUgly": true,
-        "notAlternative": false
+        "notAlternative": false,
+        "permalinkable": false,
+        "weight": 0
       },
       {
-        "MediaType": "application/xml",
+        "mediaType": "application/xml",
         "name": "Sitemap",
-        "mediaType": {
-          "type": "application/xml",
-          "string": "application/xml",
-          "mainType": "application",
-          "subType": "xml",
-          "delimiter": ".",
-          "suffixes": [
-            "xml"
-          ]
-        },
         "path": "",
         "baseName": "sitemap",
         "rel": "sitemap",
@@ -1614,7 +2291,23 @@
         "isPlainText": false,
         "isHTML": false,
         "noUgly": true,
-        "notAlternative": false
+        "notAlternative": false,
+        "permalinkable": false,
+        "weight": 0
+      },
+      {
+        "mediaType": "application/manifest+json",
+        "name": "WebAppManifest",
+        "path": "",
+        "baseName": "manifest",
+        "rel": "manifest",
+        "protocol": "",
+        "isPlainText": true,
+        "isHTML": false,
+        "noUgly": false,
+        "notAlternative": true,
+        "permalinkable": false,
+        "weight": 0
       }
     ],
     "layouts": [
@@ -1631,6 +2324,22 @@
         ]
       },
       {
+        "Example": "Base template for single page in \"posts\" section",
+        "Kind": "page",
+        "OutputFormat": "HTML",
+        "Suffix": "html",
+        "Template Lookup Order": [
+          "layouts/posts/single-baseof.html.html",
+          "layouts/posts/baseof.html.html",
+          "layouts/posts/single-baseof.html",
+          "layouts/posts/baseof.html",
+          "layouts/_default/single-baseof.html.html",
+          "layouts/_default/baseof.html.html",
+          "layouts/_default/single-baseof.html",
+          "layouts/_default/baseof.html"
+        ]
+      },
+      {
         "Example": "Single page in \"posts\" section with layout set",
         "Kind": "page",
         "OutputFormat": "HTML",
@@ -1644,6 +2353,26 @@
           "layouts/_default/single.html.html",
           "layouts/_default/demolayout.html",
           "layouts/_default/single.html"
+        ]
+      },
+      {
+        "Example": "Base template for single page in \"posts\" section with layout set",
+        "Kind": "page",
+        "OutputFormat": "HTML",
+        "Suffix": "html",
+        "Template Lookup Order": [
+          "layouts/posts/demolayout-baseof.html.html",
+          "layouts/posts/single-baseof.html.html",
+          "layouts/posts/baseof.html.html",
+          "layouts/posts/demolayout-baseof.html",
+          "layouts/posts/single-baseof.html",
+          "layouts/posts/baseof.html",
+          "layouts/_default/demolayout-baseof.html.html",
+          "layouts/_default/single-baseof.html.html",
+          "layouts/_default/baseof.html.html",
+          "layouts/_default/demolayout-baseof.html",
+          "layouts/_default/single-baseof.html",
+          "layouts/_default/baseof.html"
         ]
       },
       {
@@ -1695,6 +2424,30 @@
         ]
       },
       {
+        "Example": "Base template for home page",
+        "Kind": "home",
+        "OutputFormat": "HTML",
+        "Suffix": "html",
+        "Template Lookup Order": [
+          "layouts/index-baseof.html.html",
+          "layouts/home-baseof.html.html",
+          "layouts/list-baseof.html.html",
+          "layouts/baseof.html.html",
+          "layouts/index-baseof.html",
+          "layouts/home-baseof.html",
+          "layouts/list-baseof.html",
+          "layouts/baseof.html",
+          "layouts/_default/index-baseof.html.html",
+          "layouts/_default/home-baseof.html.html",
+          "layouts/_default/list-baseof.html.html",
+          "layouts/_default/baseof.html.html",
+          "layouts/_default/index-baseof.html",
+          "layouts/_default/home-baseof.html",
+          "layouts/_default/list-baseof.html",
+          "layouts/_default/baseof.html"
+        ]
+      },
+      {
         "Example": "Home page with type set",
         "Kind": "home",
         "OutputFormat": "HTML",
@@ -1718,6 +2471,38 @@
           "layouts/_default/index.html",
           "layouts/_default/home.html",
           "layouts/_default/list.html"
+        ]
+      },
+      {
+        "Example": "Base template for home page with type set",
+        "Kind": "home",
+        "OutputFormat": "HTML",
+        "Suffix": "html",
+        "Template Lookup Order": [
+          "layouts/demotype/index-baseof.html.html",
+          "layouts/demotype/home-baseof.html.html",
+          "layouts/demotype/list-baseof.html.html",
+          "layouts/demotype/baseof.html.html",
+          "layouts/demotype/index-baseof.html",
+          "layouts/demotype/home-baseof.html",
+          "layouts/demotype/list-baseof.html",
+          "layouts/demotype/baseof.html",
+          "layouts/index-baseof.html.html",
+          "layouts/home-baseof.html.html",
+          "layouts/list-baseof.html.html",
+          "layouts/baseof.html.html",
+          "layouts/index-baseof.html",
+          "layouts/home-baseof.html",
+          "layouts/list-baseof.html",
+          "layouts/baseof.html",
+          "layouts/_default/index-baseof.html.html",
+          "layouts/_default/home-baseof.html.html",
+          "layouts/_default/list-baseof.html.html",
+          "layouts/_default/baseof.html.html",
+          "layouts/_default/index-baseof.html",
+          "layouts/_default/home-baseof.html",
+          "layouts/_default/list-baseof.html",
+          "layouts/_default/baseof.html"
         ]
       },
       {
@@ -1745,7 +2530,7 @@
         ]
       },
       {
-        "Example": "AMP home, French language\"",
+        "Example": "AMP home, French language",
         "Kind": "home",
         "OutputFormat": "AMP",
         "Suffix": "html",
@@ -1844,75 +2629,100 @@
         ]
       },
       {
-        "Example": "Taxonomy list in categories",
+        "Example": "Taxonomy in categories",
         "Kind": "taxonomy",
         "OutputFormat": "RSS",
         "Suffix": "xml",
         "Template Lookup Order": [
-          "layouts/categories/category.rss.xml",
+          "layouts/categories/category.terms.rss.xml",
+          "layouts/categories/terms.rss.xml",
           "layouts/categories/taxonomy.rss.xml",
           "layouts/categories/rss.xml",
           "layouts/categories/list.rss.xml",
-          "layouts/categories/category.xml",
+          "layouts/categories/category.terms.xml",
+          "layouts/categories/terms.xml",
           "layouts/categories/taxonomy.xml",
           "layouts/categories/list.xml",
-          "layouts/taxonomy/category.rss.xml",
-          "layouts/taxonomy/taxonomy.rss.xml",
-          "layouts/taxonomy/rss.xml",
-          "layouts/taxonomy/list.rss.xml",
-          "layouts/taxonomy/category.xml",
-          "layouts/taxonomy/taxonomy.xml",
-          "layouts/taxonomy/list.xml",
-          "layouts/category/category.rss.xml",
+          "layouts/category/category.terms.rss.xml",
+          "layouts/category/terms.rss.xml",
           "layouts/category/taxonomy.rss.xml",
           "layouts/category/rss.xml",
           "layouts/category/list.rss.xml",
-          "layouts/category/category.xml",
+          "layouts/category/category.terms.xml",
+          "layouts/category/terms.xml",
           "layouts/category/taxonomy.xml",
           "layouts/category/list.xml",
-          "layouts/_default/category.rss.xml",
+          "layouts/taxonomy/category.terms.rss.xml",
+          "layouts/taxonomy/terms.rss.xml",
+          "layouts/taxonomy/taxonomy.rss.xml",
+          "layouts/taxonomy/rss.xml",
+          "layouts/taxonomy/list.rss.xml",
+          "layouts/taxonomy/category.terms.xml",
+          "layouts/taxonomy/terms.xml",
+          "layouts/taxonomy/taxonomy.xml",
+          "layouts/taxonomy/list.xml",
+          "layouts/_default/category.terms.rss.xml",
+          "layouts/_default/terms.rss.xml",
           "layouts/_default/taxonomy.rss.xml",
           "layouts/_default/rss.xml",
           "layouts/_default/list.rss.xml",
-          "layouts/_default/category.xml",
+          "layouts/_default/category.terms.xml",
+          "layouts/_default/terms.xml",
           "layouts/_default/taxonomy.xml",
           "layouts/_default/list.xml",
           "layouts/_internal/_default/rss.xml"
         ]
       },
       {
-        "Example": "Taxonomy terms in categories",
-        "Kind": "taxonomyTerm",
+        "Example": "Term in categories",
+        "Kind": "term",
         "OutputFormat": "RSS",
         "Suffix": "xml",
         "Template Lookup Order": [
-          "layouts/categories/category.terms.rss.xml",
-          "layouts/categories/terms.rss.xml",
+          "layouts/categories/term.rss.xml",
+          "layouts/categories/category.rss.xml",
+          "layouts/categories/taxonomy.rss.xml",
           "layouts/categories/rss.xml",
           "layouts/categories/list.rss.xml",
-          "layouts/categories/category.terms.xml",
-          "layouts/categories/terms.xml",
+          "layouts/categories/term.xml",
+          "layouts/categories/category.xml",
+          "layouts/categories/taxonomy.xml",
           "layouts/categories/list.xml",
-          "layouts/taxonomy/category.terms.rss.xml",
-          "layouts/taxonomy/terms.rss.xml",
+          "layouts/term/term.rss.xml",
+          "layouts/term/category.rss.xml",
+          "layouts/term/taxonomy.rss.xml",
+          "layouts/term/rss.xml",
+          "layouts/term/list.rss.xml",
+          "layouts/term/term.xml",
+          "layouts/term/category.xml",
+          "layouts/term/taxonomy.xml",
+          "layouts/term/list.xml",
+          "layouts/taxonomy/term.rss.xml",
+          "layouts/taxonomy/category.rss.xml",
+          "layouts/taxonomy/taxonomy.rss.xml",
           "layouts/taxonomy/rss.xml",
           "layouts/taxonomy/list.rss.xml",
-          "layouts/taxonomy/category.terms.xml",
-          "layouts/taxonomy/terms.xml",
+          "layouts/taxonomy/term.xml",
+          "layouts/taxonomy/category.xml",
+          "layouts/taxonomy/taxonomy.xml",
           "layouts/taxonomy/list.xml",
-          "layouts/category/category.terms.rss.xml",
-          "layouts/category/terms.rss.xml",
+          "layouts/category/term.rss.xml",
+          "layouts/category/category.rss.xml",
+          "layouts/category/taxonomy.rss.xml",
           "layouts/category/rss.xml",
           "layouts/category/list.rss.xml",
-          "layouts/category/category.terms.xml",
-          "layouts/category/terms.xml",
+          "layouts/category/term.xml",
+          "layouts/category/category.xml",
+          "layouts/category/taxonomy.xml",
           "layouts/category/list.xml",
-          "layouts/_default/category.terms.rss.xml",
-          "layouts/_default/terms.rss.xml",
+          "layouts/_default/term.rss.xml",
+          "layouts/_default/category.rss.xml",
+          "layouts/_default/taxonomy.rss.xml",
           "layouts/_default/rss.xml",
           "layouts/_default/list.rss.xml",
-          "layouts/_default/category.terms.xml",
-          "layouts/_default/terms.xml",
+          "layouts/_default/term.xml",
+          "layouts/_default/category.xml",
+          "layouts/_default/taxonomy.xml",
           "layouts/_default/list.xml",
           "layouts/_internal/_default/rss.xml"
         ]
@@ -2013,61 +2823,85 @@
         "OutputFormat": "HTML",
         "Suffix": "html",
         "Template Lookup Order": [
-          "layouts/categories/category.html.html",
+          "layouts/categories/category.terms.html.html",
+          "layouts/categories/terms.html.html",
           "layouts/categories/taxonomy.html.html",
           "layouts/categories/list.html.html",
-          "layouts/categories/category.html",
+          "layouts/categories/category.terms.html",
+          "layouts/categories/terms.html",
           "layouts/categories/taxonomy.html",
           "layouts/categories/list.html",
-          "layouts/taxonomy/category.html.html",
-          "layouts/taxonomy/taxonomy.html.html",
-          "layouts/taxonomy/list.html.html",
-          "layouts/taxonomy/category.html",
-          "layouts/taxonomy/taxonomy.html",
-          "layouts/taxonomy/list.html",
-          "layouts/category/category.html.html",
+          "layouts/category/category.terms.html.html",
+          "layouts/category/terms.html.html",
           "layouts/category/taxonomy.html.html",
           "layouts/category/list.html.html",
-          "layouts/category/category.html",
+          "layouts/category/category.terms.html",
+          "layouts/category/terms.html",
           "layouts/category/taxonomy.html",
           "layouts/category/list.html",
-          "layouts/_default/category.html.html",
+          "layouts/taxonomy/category.terms.html.html",
+          "layouts/taxonomy/terms.html.html",
+          "layouts/taxonomy/taxonomy.html.html",
+          "layouts/taxonomy/list.html.html",
+          "layouts/taxonomy/category.terms.html",
+          "layouts/taxonomy/terms.html",
+          "layouts/taxonomy/taxonomy.html",
+          "layouts/taxonomy/list.html",
+          "layouts/_default/category.terms.html.html",
+          "layouts/_default/terms.html.html",
           "layouts/_default/taxonomy.html.html",
           "layouts/_default/list.html.html",
-          "layouts/_default/category.html",
+          "layouts/_default/category.terms.html",
+          "layouts/_default/terms.html",
           "layouts/_default/taxonomy.html",
           "layouts/_default/list.html"
         ]
       },
       {
         "Example": "Taxonomy term in categories",
-        "Kind": "taxonomyTerm",
+        "Kind": "term",
         "OutputFormat": "HTML",
         "Suffix": "html",
         "Template Lookup Order": [
-          "layouts/categories/category.terms.html.html",
-          "layouts/categories/terms.html.html",
+          "layouts/categories/term.html.html",
+          "layouts/categories/category.html.html",
+          "layouts/categories/taxonomy.html.html",
           "layouts/categories/list.html.html",
-          "layouts/categories/category.terms.html",
-          "layouts/categories/terms.html",
+          "layouts/categories/term.html",
+          "layouts/categories/category.html",
+          "layouts/categories/taxonomy.html",
           "layouts/categories/list.html",
-          "layouts/taxonomy/category.terms.html.html",
-          "layouts/taxonomy/terms.html.html",
+          "layouts/term/term.html.html",
+          "layouts/term/category.html.html",
+          "layouts/term/taxonomy.html.html",
+          "layouts/term/list.html.html",
+          "layouts/term/term.html",
+          "layouts/term/category.html",
+          "layouts/term/taxonomy.html",
+          "layouts/term/list.html",
+          "layouts/taxonomy/term.html.html",
+          "layouts/taxonomy/category.html.html",
+          "layouts/taxonomy/taxonomy.html.html",
           "layouts/taxonomy/list.html.html",
-          "layouts/taxonomy/category.terms.html",
-          "layouts/taxonomy/terms.html",
+          "layouts/taxonomy/term.html",
+          "layouts/taxonomy/category.html",
+          "layouts/taxonomy/taxonomy.html",
           "layouts/taxonomy/list.html",
-          "layouts/category/category.terms.html.html",
-          "layouts/category/terms.html.html",
+          "layouts/category/term.html.html",
+          "layouts/category/category.html.html",
+          "layouts/category/taxonomy.html.html",
           "layouts/category/list.html.html",
-          "layouts/category/category.terms.html",
-          "layouts/category/terms.html",
+          "layouts/category/term.html",
+          "layouts/category/category.html",
+          "layouts/category/taxonomy.html",
           "layouts/category/list.html",
-          "layouts/_default/category.terms.html.html",
-          "layouts/_default/terms.html.html",
+          "layouts/_default/term.html.html",
+          "layouts/_default/category.html.html",
+          "layouts/_default/taxonomy.html.html",
           "layouts/_default/list.html.html",
-          "layouts/_default/category.terms.html",
-          "layouts/_default/terms.html",
+          "layouts/_default/term.html",
+          "layouts/_default/category.html",
+          "layouts/_default/taxonomy.html",
           "layouts/_default/list.html"
         ]
       }
@@ -2161,10 +2995,10 @@
           ]
         },
         "Eq": {
-          "Description": "Eq returns the boolean truth of arg1 == arg2.",
+          "Description": "Eq returns the boolean truth of arg1 == arg2 || arg1 == arg3 || arg1 == arg4.",
           "Args": [
-            "x",
-            "y"
+            "first",
+            "others"
           ],
           "Aliases": [
             "eq"
@@ -2177,10 +3011,10 @@
           ]
         },
         "Ge": {
-          "Description": "Ge returns the boolean truth of arg1 \u003e= arg2.",
+          "Description": "Ge returns the boolean truth of arg1 \u003e= arg2 \u0026\u0026 arg1 \u003e= arg3 \u0026\u0026 arg1 \u003e= arg4.",
           "Args": [
-            "a",
-            "b"
+            "first",
+            "others"
           ],
           "Aliases": [
             "ge"
@@ -2193,10 +3027,10 @@
           ]
         },
         "Gt": {
-          "Description": "Gt returns the boolean truth of arg1 \u003e arg2.",
+          "Description": "Gt returns the boolean truth of arg1 \u003e arg2 \u0026\u0026 arg1 \u003e arg3 \u0026\u0026 arg1 \u003e arg4.",
           "Args": [
-            "a",
-            "b"
+            "first",
+            "others"
           ],
           "Aliases": [
             "gt"
@@ -2204,10 +3038,10 @@
           "Examples": []
         },
         "Le": {
-          "Description": "Le returns the boolean truth of arg1 \u003c= arg2.",
+          "Description": "Le returns the boolean truth of arg1 \u003c= arg2 \u0026\u0026 arg1 \u003c= arg3 \u0026\u0026 arg1 \u003c= arg4.",
           "Args": [
-            "a",
-            "b"
+            "first",
+            "others"
           ],
           "Aliases": [
             "le"
@@ -2215,10 +3049,10 @@
           "Examples": []
         },
         "Lt": {
-          "Description": "Lt returns the boolean truth of arg1 \u003c arg2.",
+          "Description": "Lt returns the boolean truth of arg1 \u003c arg2 \u0026\u0026 arg1 \u003c arg3 \u0026\u0026 arg1 \u003c arg4.",
           "Args": [
-            "a",
-            "b"
+            "first",
+            "others"
           ],
           "Aliases": [
             "lt"
@@ -2226,10 +3060,10 @@
           "Examples": []
         },
         "Ne": {
-          "Description": "Ne returns the boolean truth of arg1 != arg2.",
+          "Description": "Ne returns the boolean truth of arg1 != arg2 \u0026\u0026 arg1 != arg3 \u0026\u0026 arg1 != arg4.",
           "Args": [
-            "x",
-            "y"
+            "first",
+            "others"
           ],
           "Aliases": [
             "ne"
@@ -2271,6 +3105,21 @@
           ],
           "Examples": []
         },
+        "Complement": {
+          "Description": "Complement gives the elements in the last element of seqs that are not in\nany of the others.\nAll elements of seqs must be slices or arrays of comparable types.\n\nThe reasoning behind this rather clumsy API is so we can do this in the templates:\n   {{ $c := .Pages | complement $last4 }}",
+          "Args": [
+            "seqs"
+          ],
+          "Aliases": [
+            "complement"
+          ],
+          "Examples": [
+            [
+              "{{ slice \"a\" \"b\" \"c\" \"d\" \"e\" \"f\" | complement (slice \"b\" \"c\") (slice \"d\" \"e\")  }}",
+              "[a f]"
+            ]
+          ]
+        },
         "Delimit": {
           "Description": "Delimit takes a given sequence and returns a delimited HTML string.\nIf last is passed to the function, it will be used as the final delimiter.",
           "Args": [
@@ -2289,7 +3138,7 @@
           ]
         },
         "Dictionary": {
-          "Description": "Dictionary creates a map[string]interface{} from the given parameters by\nwalking the parameters and treating them as key-value pairs.  The number\nof parameters must be even.",
+          "Description": "Dictionary creates a map[string]interface{} from the given parameters by\nwalking the parameters and treating them as key-value pairs.  The number\nof parameters must be even.\nThe keys can be string slices, which will create the needed nested structure.",
           "Args": [
             "values"
           ],
@@ -2356,7 +3205,7 @@
           "Description": "Index returns the result of indexing its first argument by the following\narguments. Thus \"index x 1 2 3\" is, in Go syntax, x[1][2][3]. Each\nindexed item must be a map, slice, or array.\n\nCopied from Go stdlib src/text/template/funcs.go.\n\nWe deviate from the stdlib due to https://github.com/golang/go/issues/14751.\n\nTODO(moorereason): merge upstream changes.",
           "Args": [
             "item",
-            "indices"
+            "args"
           ],
           "Aliases": [
             "index"
@@ -2413,6 +3262,29 @@
           ],
           "Examples": []
         },
+        "Merge": {
+          "Description": "Merge creates a copy of the final parameter and merges the preceding\nparameters into it in reverse order.\nCurrently only maps are supported. Key handling is case insensitive.",
+          "Args": [
+            "params"
+          ],
+          "Aliases": [
+            "merge"
+          ],
+          "Examples": [
+            [
+              "{{ dict \"title\" \"Hugo Rocks!\" | collections.Merge (dict \"title\" \"Default Title\" \"description\" \"Yes, Hugo Rocks!\") | sort }}",
+              "[Yes, Hugo Rocks! Hugo Rocks!]"
+            ],
+            [
+              "{{  merge (dict \"title\" \"Default Title\" \"description\" \"Yes, Hugo Rocks!\") (dict \"title\" \"Hugo Rocks!\") | sort }}",
+              "[Yes, Hugo Rocks! Hugo Rocks!]"
+            ],
+            [
+              "{{  merge (dict \"title\" \"Default Title\" \"description\" \"Yes, Hugo Rocks!\") (dict \"title\" \"Hugo Rocks!\") (dict \"extra\" \"For reals!\") | sort }}",
+              "[Yes, Hugo Rocks! For reals! Hugo Rocks!]"
+            ]
+          ]
+        },
         "NewScratch": {
           "Description": "NewScratch creates a new Scratch which can be used to store values in a\nthread safe way.",
           "Args": null,
@@ -2442,8 +3314,18 @@
             [
               "\u003ca href=\"https://www.google.com?{{ (querify \"q\" \"test\" \"page\" 3) | safeURL }}\"\u003eSearch\u003c/a\u003e",
               "\u003ca href=\"https://www.google.com?page=3\u0026amp;q=test\"\u003eSearch\u003c/a\u003e"
+            ],
+            [
+              "{{ slice \"foo\" 1 \"bar\" 2 | querify | safeHTML }}",
+              "bar=2\u0026foo=1"
             ]
           ]
+        },
+        "Reverse": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
         },
         "Seq": {
           "Description": "Seq creates a sequence of integers.  It's named and used as GNU's seq.\n\nExamples:\n    3 =\u003e 1, 2, 3\n    1 2 4 =\u003e 1, 3\n    -3 =\u003e -1, -2, -3\n    1 4 =\u003e 1, 2, 3, 4\n    1 -2 =\u003e 1, 0, -1, -2",
@@ -2496,6 +3378,22 @@
           ],
           "Examples": []
         },
+        "SymDiff": {
+          "Description": "SymDiff returns the symmetric difference of s1 and s2.\nArguments must be either a slice or an array of comparable types.",
+          "Args": [
+            "s2",
+            "s1"
+          ],
+          "Aliases": [
+            "symdiff"
+          ],
+          "Examples": [
+            [
+              "{{ slice 1 2 3 | symdiff (slice 3 4) }}",
+              "[1 2 4]"
+            ]
+          ]
+        },
         "Union": {
           "Description": "Union returns the union of the given sets, l1 and l2. l1 and\nl2 must be of the same type and may be either arrays or slices.\nIf l1 and l2 aren't of the same type then l1 will be returned.\nIf either l1 or l2 is nil then the non-nil list will be returned.",
           "Args": [
@@ -2515,7 +3413,7 @@
         "Uniq": {
           "Description": "Uniq takes in a slice or array and returns a slice with subsequent\nduplicate elements removed.",
           "Args": [
-            "l"
+            "seq"
           ],
           "Aliases": [
             "uniq"
@@ -2541,6 +3439,23 @@
         }
       },
       "crypto": {
+        "HMAC": {
+          "Description": "HMAC returns a cryptographic hash that uses a key to sign a message.",
+          "Args": [
+            "h",
+            "k",
+            "m"
+          ],
+          "Aliases": [
+            "hmac"
+          ],
+          "Examples": [
+            [
+              "{{ hmac \"sha256\" \"Secret key\" \"Hello world, gophers!\" }}",
+              "b6d11b6c53830b9d87036272ca9fe9d19306b8f9d8aa07b15da27d89e6e34f40"
+            ]
+          ]
+        },
         "MD5": {
           "Description": "MD5 hashes the given input and returns its MD5 checksum.",
           "Args": [
@@ -2596,7 +3511,7 @@
           "Description": "GetCSV expects a data separator and one or n-parts of a URL to a resource which\ncan either be a local or a remote one.\nThe data separator can be a comma, semi-colon, pipe, etc, but only one character.\nIf you provide multiple parts for the URL they will be joined together to the final URL.\nGetCSV returns nil or a slice slice to use in a short code.",
           "Args": [
             "sep",
-            "urlParts"
+            "args"
           ],
           "Aliases": [
             "getCSV"
@@ -2606,12 +3521,27 @@
         "GetJSON": {
           "Description": "GetJSON expects one or n-parts of a URL to a resource which can either be a local or a remote one.\nIf you provide multiple parts they will be joined together to the final URL.\nGetJSON returns nil or parsed JSON to use in a short code.",
           "Args": [
-            "urlParts"
+            "args"
           ],
           "Aliases": [
             "getJSON"
           ],
           "Examples": []
+        }
+      },
+      "debug": {
+        "Dump": {
+          "Description": "Dump returns a object dump of val as a string.\nNote that not every value passed to Dump will print so nicely, but\nwe'll improve on that. We recommend using the \"go\" Chroma lexer to format the output\nnicely.\nAlso note that the output from Dump may change from Hugo version to the next,\nso don't depend on a specific output.",
+          "Args": [
+            "val"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{- $m := newScratch -}}\n{{- $m.Set \"Hugo\" \"Rocks!\" -}}\n{{- $m.Values | debug.Dump | safeHTML -}}",
+              "map[string]interface {}{\n  \"Hugo\": \"Rocks!\",\n}"
+            ]
+          ]
         }
       },
       "encoding": {
@@ -2650,9 +3580,9 @@
           ]
         },
         "Jsonify": {
-          "Description": "Jsonify encodes a given object to JSON, returning pretty printed output.",
+          "Description": "Jsonify encodes a given object to JSON.  To pretty print the JSON, pass a map\nor dictionary of options as the first argument.  Supported options are\n\"prefix\" and \"indent\".  Each JSON element in the output will begin on a new\nline beginning with prefix followed by one or more copies of indent according\nto the indentation nesting.",
           "Args": [
-            "v"
+            "args"
           ],
           "Aliases": [
             "jsonify"
@@ -2660,6 +3590,10 @@
           "Examples": [
             [
               "{{ (slice \"A\" \"B\" \"C\") | jsonify }}",
+              "[\"A\",\"B\",\"C\"]"
+            ],
+            [
+              "{{ (slice \"A\" \"B\" \"C\") | jsonify (dict \"indent\" \"  \") }}",
               "[\n  \"A\",\n  \"B\",\n  \"C\"\n]"
             ]
           ]
@@ -2667,7 +3601,7 @@
       },
       "fmt": {
         "Errorf": {
-          "Description": "Errorf formats according to a format specifier and returns the string as a\nvalue that satisfies error.",
+          "Description": "Errorf formats according to a format specifier and logs an ERROR.\nIt returns an empty string.",
           "Args": [
             "format",
             "a"
@@ -2678,7 +3612,24 @@
           "Examples": [
             [
               "{{ errorf \"%s.\" \"failed\" }}",
-              "failed."
+              ""
+            ]
+          ]
+        },
+        "Erroridf": {
+          "Description": "Erroridf formats according to a format specifier and logs an ERROR and\nan information text that the error with the given ID can be suppressed in config.\nIt returns an empty string.",
+          "Args": [
+            "id",
+            "format",
+            "a"
+          ],
+          "Aliases": [
+            "erroridf"
+          ],
+          "Examples": [
+            [
+              "{{ erroridf \"my-err-id\" \"%s.\" \"failed\" }}",
+              ""
             ]
           ]
         },
@@ -2727,9 +3678,69 @@
               "works!\n"
             ]
           ]
+        },
+        "Warnf": {
+          "Description": "Warnf formats according to a format specifier and logs a WARNING.\nIt returns an empty string.",
+          "Args": [
+            "format",
+            "a"
+          ],
+          "Aliases": [
+            "warnf"
+          ],
+          "Examples": [
+            [
+              "{{ warnf \"%s.\" \"warning\" }}",
+              ""
+            ]
+          ]
+        }
+      },
+      "hugo": {
+        "Generator": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "IsExtended": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "IsProduction": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Version": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
         }
       },
       "images": {
+        "Brightness": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "ColorBalance": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Colorize": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
         "Config": {
           "Description": "Config returns the image.Config for the specified path relative to the\nworking directory.",
           "Args": [
@@ -2739,6 +3750,84 @@
             "imageConfig"
           ],
           "Examples": []
+        },
+        "Contrast": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Filter": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Gamma": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "GaussianBlur": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Grayscale": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Hue": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Invert": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Overlay": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Pixelate": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Saturation": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Sepia": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Sigmoid": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "UnsharpMask": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
         }
       },
       "inflect": {
@@ -2798,6 +3887,14 @@
               "cat"
             ]
           ]
+        }
+      },
+      "js": {
+        "Build": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
         }
       },
       "lang": {
@@ -2923,6 +4020,34 @@
             ]
           ]
         },
+        "Max": {
+          "Description": "Max returns the greater of two numbers.",
+          "Args": [
+            "a",
+            "b"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{math.Max 1 2 }}",
+              "2"
+            ]
+          ]
+        },
+        "Min": {
+          "Description": "Min returns the smaller of two numbers.",
+          "Args": [
+            "a",
+            "b"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{math.Min 1 2 }}",
+              "1"
+            ]
+          ]
+        },
         "Mod": {
           "Description": "Mod returns a % b.",
           "Args": [
@@ -2971,6 +4096,22 @@
             ]
           ]
         },
+        "Pow": {
+          "Description": "Pow returns a raised to the power of b.",
+          "Args": [
+            "a",
+            "b"
+          ],
+          "Aliases": [
+            "pow"
+          ],
+          "Examples": [
+            [
+              "{{math.Pow 2 3}}",
+              "8"
+            ]
+          ]
+        },
         "Round": {
           "Description": "Round returns the nearest integer, rounding half away from zero.",
           "Args": [
@@ -2981,6 +4122,19 @@
             [
               "{{math.Round 1.5}}",
               "2"
+            ]
+          ]
+        },
+        "Sqrt": {
+          "Description": "Sqrt returns the square root of a number.",
+          "Args": [
+            "a"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{math.Sqrt 81}}",
+              "9"
             ]
           ]
         },
@@ -2999,6 +4153,14 @@
               "1"
             ]
           ]
+        }
+      },
+      "openapi3": {
+        "Unmarshal": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": []
         }
       },
       "os": {
@@ -3066,7 +4228,7 @@
       },
       "partials": {
         "Include": {
-          "Description": "Include executes the named partial and returns either a string,\nwhen the partial is a text/template, or template.HTML when html/template.",
+          "Description": "Include executes the named partial.\nIf the partial contains a return statement, that value will be returned.\nElse, the rendered output will be returned:\nA string if the partial is a text/template, or template.HTML when html/template.",
           "Args": [
             "name",
             "contextList"
@@ -3082,11 +4244,11 @@
           ]
         },
         "IncludeCached": {
-          "Description": "IncludeCached executes and caches partial templates.  An optional variant\nstring parameter (a string slice actually, but be only use a variadic\nargument to make it optional) can be passed so that a given partial can have\nmultiple uses. The cache is created with name+variant as the key.",
+          "Description": "IncludeCached executes and caches partial templates.  The cache is created with name+variants as the key.",
           "Args": [
             "name",
             "context",
-            "variant"
+            "variants"
           ],
           "Aliases": [
             "partialCached"
@@ -3160,7 +4322,45 @@
           ]
         }
       },
+      "reflect": {
+        "IsMap": {
+          "Description": "IsMap reports whether v is a map.",
+          "Args": [
+            "v"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{ if reflect.IsMap (dict \"a\" 1) }}Map{{ end }}",
+              "Map"
+            ]
+          ]
+        },
+        "IsSlice": {
+          "Description": "IsSlice reports whether v is a slice.",
+          "Args": [
+            "v"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{ if reflect.IsSlice (slice 1 2 3) }}Slice{{ end }}",
+              "Slice"
+            ]
+          ]
+        }
+      },
       "resources": {
+        "Babel": {
+          "Description": "Babel processes the given Resource with Babel.",
+          "Args": [
+            "args"
+          ],
+          "Aliases": [
+            "babel"
+          ],
+          "Examples": []
+        },
         "Concat": {
           "Description": "",
           "Args": null,
@@ -3190,12 +4390,24 @@
           "Examples": null
         },
         "Get": {
-          "Description": "Get locates the filename given in Hugo's filesystems: static, assets and content (in that order)\nand creates a Resource object that can be used for further transformations.",
+          "Description": "Get locates the filename given in Hugo's assets filesystem\nand creates a Resource object that can be used for further transformations.",
           "Args": [
             "filename"
           ],
           "Aliases": null,
           "Examples": []
+        },
+        "GetMatch": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Match": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
         },
         "Minify": {
           "Description": "Minify minifies the given Resource using the MediaType to pick the correct\nminifier.",
@@ -3216,6 +4428,12 @@
             "postCSS"
           ],
           "Examples": []
+        },
+        "PostProcess": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
         },
         "ToCSS": {
           "Description": "ToCSS converts the given Resource to CSS. You can optional provide an Options\nobject or a target path (string) as first argument.",
@@ -3325,6 +4543,92 @@
           ]
         }
       },
+      "site": {
+        "BaseURL": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Data": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Hugo": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "IsServer": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Language": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "LastChange": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Menus": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Pages": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Params": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "RegularPages": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "ServerPort": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Sites": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Taxonomies": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        },
+        "Title": {
+          "Description": "",
+          "Args": null,
+          "Aliases": null,
+          "Examples": null
+        }
+      },
       "strings": {
         "Chomp": {
           "Description": "Chomp returns a copy of s with all trailing newline characters removed.",
@@ -3342,19 +4646,57 @@
           ]
         },
         "Contains": {
-          "Description": "",
-          "Args": null,
+          "Description": "Contains reports whether substr is in s.",
+          "Args": [
+            "s",
+            "substr"
+          ],
           "Aliases": null,
-          "Examples": null
+          "Examples": [
+            [
+              "{{ strings.Contains \"abc\" \"b\" }}",
+              "true"
+            ],
+            [
+              "{{ strings.Contains \"abc\" \"d\" }}",
+              "false"
+            ]
+          ]
         },
         "ContainsAny": {
-          "Description": "",
-          "Args": null,
+          "Description": "ContainsAny reports whether any Unicode code points in chars are within s.",
+          "Args": [
+            "s",
+            "chars"
+          ],
           "Aliases": null,
-          "Examples": null
+          "Examples": [
+            [
+              "{{ strings.ContainsAny \"abc\" \"bcd\" }}",
+              "true"
+            ],
+            [
+              "{{ strings.ContainsAny \"abc\" \"def\" }}",
+              "false"
+            ]
+          ]
+        },
+        "Count": {
+          "Description": "Count counts the number of non-overlapping instances of substr in s.\nIf substr is an empty string, Count returns 1 + the number of Unicode code points in s.",
+          "Args": [
+            "substr",
+            "s"
+          ],
+          "Aliases": null,
+          "Examples": [
+            [
+              "{{\"aabab\" | strings.Count \"a\" }}",
+              "3"
+            ]
+          ]
         },
         "CountRunes": {
-          "Description": "CountRunes returns the number of runes in s, excluding whitepace.",
+          "Description": "CountRunes returns the number of runes in s, excluding whitespace.",
           "Args": [
             "s"
           ],
@@ -3444,11 +4786,12 @@
           ]
         },
         "Replace": {
-          "Description": "Replace returns a copy of the string s with all occurrences of old replaced\nwith new.",
+          "Description": "Replace returns a copy of the string s with all occurrences of old replaced\nwith new.  The number of replacements can be limited with an optional fourth\nparameter.",
           "Args": [
             "s",
             "old",
-            "new"
+            "new",
+            "limit"
           ],
           "Aliases": [
             "replace"
@@ -3457,20 +4800,34 @@
             [
               "{{ replace \"Batman and Robin\" \"Robin\" \"Catwoman\" }}",
               "Batman and Catwoman"
+            ],
+            [
+              "{{ replace \"aabbaabb\" \"a\" \"z\" 2 }}",
+              "zzbbaabb"
             ]
           ]
         },
         "ReplaceRE": {
-          "Description": "ReplaceRE returns a copy of s, replacing all matches of the regular\nexpression pattern with the replacement text repl.",
+          "Description": "ReplaceRE returns a copy of s, replacing all matches of the regular\nexpression pattern with the replacement text repl. The number of replacements\ncan be limited with an optional fourth parameter.",
           "Args": [
             "pattern",
             "repl",
-            "s"
+            "s",
+            "n"
           ],
           "Aliases": [
             "replaceRE"
           ],
-          "Examples": []
+          "Examples": [
+            [
+              "{{ replaceRE \"a+b\" \"X\" \"aabbaabbab\" }}",
+              "XbXbX"
+            ],
+            [
+              "{{ replaceRE \"a+b\" \"X\" \"aabbaabbab\" 1 }}",
+              "Xbaabbab"
+            ]
+          ]
         },
         "RuneCount": {
           "Description": "RuneCount returns the number of runes in s.",
@@ -3704,7 +5061,8 @@
         "AsTime": {
           "Description": "AsTime converts the textual representation of the datetime string into\na time.Time interface.",
           "Args": [
-            "v"
+            "v",
+            "args"
           ],
           "Aliases": null,
           "Examples": [
@@ -3887,6 +5245,25 @@
             [
               "{{ \"title = \\\"Hello World\\\"\" | transform.Remarshal \"json\" | safeHTML }}",
               "{\n   \"title\": \"Hello World\"\n}\n"
+            ]
+          ]
+        },
+        "Unmarshal": {
+          "Description": "Unmarshal unmarshals the data given, which can be either a string, json.RawMessage\nor a Resource. Supported formats are JSON, TOML, YAML, and CSV.\nYou can optionally provide an options map as the first argument.",
+          "Args": [
+            "args"
+          ],
+          "Aliases": [
+            "unmarshal"
+          ],
+          "Examples": [
+            [
+              "{{ \"hello = \\\"Hello World\\\"\" | transform.Unmarshal }}",
+              "map[hello:Hello World]"
+            ],
+            [
+              "{{ \"hello = \\\"Hello World\\\"\" | resources.FromString \"data/greetings.toml\" | transform.Unmarshal }}",
+              "map[hello:Hello World]"
             ]
           ]
         }

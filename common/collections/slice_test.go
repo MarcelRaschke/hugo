@@ -1,4 +1,4 @@
-// Copyright 2018 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,17 +15,18 @@ package collections
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
-	"github.com/alecthomas/assert"
+	qt "github.com/frankban/quicktest"
 )
 
-var _ Slicer = (*tstSlicer)(nil)
-var _ Slicer = (*tstSlicerIn1)(nil)
-var _ Slicer = (*tstSlicerIn2)(nil)
-var _ testSlicerInterface = (*tstSlicerIn1)(nil)
-var _ testSlicerInterface = (*tstSlicerIn1)(nil)
+var (
+	_ Slicer              = (*tstSlicer)(nil)
+	_ Slicer              = (*tstSlicerIn1)(nil)
+	_ Slicer              = (*tstSlicerIn2)(nil)
+	_ testSlicerInterface = (*tstSlicerIn1)(nil)
+	_ testSlicerInterface = (*tstSlicerIn1)(nil)
+)
 
 type testSlicerInterface interface {
 	Name() string
@@ -34,15 +35,15 @@ type testSlicerInterface interface {
 type testSlicerInterfaces []testSlicerInterface
 
 type tstSlicerIn1 struct {
-	name string
+	TheName string
 }
 
 type tstSlicerIn2 struct {
-	name string
+	TheName string
 }
 
 type tstSlicer struct {
-	name string
+	TheName string
 }
 
 func (p *tstSlicerIn1) Slice(in interface{}) (interface{}, error) {
@@ -55,7 +56,6 @@ func (p *tstSlicerIn1) Slice(in interface{}) (interface{}, error) {
 		default:
 			return nil, errors.New("invalid type")
 		}
-
 	}
 	return result, nil
 }
@@ -75,11 +75,11 @@ func (p *tstSlicerIn2) Slice(in interface{}) (interface{}, error) {
 }
 
 func (p *tstSlicerIn1) Name() string {
-	return p.Name()
+	return p.TheName
 }
 
 func (p *tstSlicerIn2) Name() string {
-	return p.Name()
+	return p.TheName
 }
 
 func (p *tstSlicer) Slice(in interface{}) (interface{}, error) {
@@ -100,6 +100,7 @@ type tstSlicers []*tstSlicer
 
 func TestSlice(t *testing.T) {
 	t.Parallel()
+	c := qt.New(t)
 
 	for i, test := range []struct {
 		args     []interface{}
@@ -114,12 +115,10 @@ func TestSlice(t *testing.T) {
 		{[]interface{}{&tstSlicerIn1{"a"}, &tstSlicerIn2{"b"}}, testSlicerInterfaces{&tstSlicerIn1{"a"}, &tstSlicerIn2{"b"}}},
 		{[]interface{}{&tstSlicerIn1{"a"}, &tstSlicer{"b"}}, []interface{}{&tstSlicerIn1{"a"}, &tstSlicer{"b"}}},
 	} {
-		errMsg := fmt.Sprintf("[%d] %v", i, test.args)
+		errMsg := qt.Commentf("[%d] %v", i, test.args)
 
 		result := Slice(test.args...)
 
-		assert.Equal(t, test.expected, result, errMsg)
+		c.Assert(test.expected, qt.DeepEquals, result, errMsg)
 	}
-
-	assert.Len(t, Slice(), 0)
 }

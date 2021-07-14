@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/parser/metadecoders"
 
 	_errors "github.com/pkg/errors"
@@ -29,7 +30,6 @@ import (
 	"github.com/gohugoio/hugo/parser"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-	"github.com/spf13/viper"
 )
 
 var _ cmder = (*newSiteCmd)(nil)
@@ -37,11 +37,11 @@ var _ cmder = (*newSiteCmd)(nil)
 type newSiteCmd struct {
 	configFormat string
 
-	*baseCmd
+	*baseBuilderCmd
 }
 
-func newNewSiteCmd() *newSiteCmd {
-	ccmd := &newSiteCmd{}
+func (b *commandsBuilder) newNewSiteCmd() *newSiteCmd {
+	cc := &newSiteCmd{}
 
 	cmd := &cobra.Command{
 		Use:   "site [path]",
@@ -49,16 +49,15 @@ func newNewSiteCmd() *newSiteCmd {
 		Long: `Create a new site in the provided directory.
 The new site will have the correct structure, but no content or theme yet.
 Use ` + "`hugo new [contentPath]`" + ` to create new content.`,
-		RunE: ccmd.newSite,
+		RunE: cc.newSite,
 	}
 
-	cmd.Flags().StringVarP(&ccmd.configFormat, "format", "f", "toml", "config & frontmatter format")
+	cmd.Flags().StringVarP(&cc.configFormat, "format", "f", "toml", "config & frontmatter format")
 	cmd.Flags().Bool("force", false, "init inside non-empty directory")
 
-	ccmd.baseCmd = newBaseCmd(cmd)
+	cc.baseBuilderCmd = b.newBuilderBasicCmd(cmd)
 
-	return ccmd
-
+	return cc
 }
 
 func (n *newSiteCmd) doNewSite(fs *hugofs.Fs, basepath string, force bool) error {
@@ -81,7 +80,7 @@ func (n *newSiteCmd) doNewSite(fs *hugofs.Fs, basepath string, force bool) error
 
 		switch {
 		case !isEmpty && !force:
-			return errors.New(basepath + " already exists and is not empty")
+			return errors.New(basepath + " already exists and is not empty. See --force.")
 
 		case !isEmpty && force:
 			all := append(dirs, filepath.Join(basepath, "config."+n.configFormat))
@@ -124,7 +123,7 @@ func (n *newSiteCmd) newSite(cmd *cobra.Command, args []string) error {
 
 	forceNew, _ := cmd.Flags().GetBool("force")
 
-	return n.doNewSite(hugofs.NewDefault(viper.New()), createpath, forceNew)
+	return n.doNewSite(hugofs.NewDefault(config.New()), createpath, forceNew)
 }
 
 func createConfig(fs *hugofs.Fs, inpath string, kind string) (err error) {
@@ -149,7 +148,7 @@ func nextStepsText() string {
 	nextStepsText.WriteString(`Just a few more steps and you're ready to go:
 
 1. Download a theme into the same-named folder.
-   Choose a theme from https://themes.gohugo.io/, or
+   Choose a theme from https://themes.gohugo.io/ or
    create your own with the "hugo new theme <THEMENAME>" command.
 2. Perhaps you want to add some content. You can add single files
    with "hugo new `)

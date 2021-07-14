@@ -1,4 +1,4 @@
-// Copyright 2015 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,17 @@
 package hugolib
 
 import (
+	"fmt"
 	"path/filepath"
 	"reflect"
-	"strings"
+	"runtime"
 	"testing"
 
 	"github.com/gohugoio/hugo/common/loggers"
 
 	"github.com/gohugoio/hugo/deps"
 
-	"fmt"
-	"runtime"
-
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestDataDir(t *testing.T) {
@@ -198,7 +196,6 @@ func TestDataDirMultipleSources(t *testing.T) {
 
 	doTestDataDir(t, dd, expected,
 		"theme", "mytheme")
-
 }
 
 // test (and show) the way values from four different sources,
@@ -290,6 +287,24 @@ func TestDataDirCollidingMapsAndArrays(t *testing.T) {
 	doTestDataDir(t, dd, expected, "theme", "mytheme")
 }
 
+// https://discourse.gohugo.io/t/recursive-data-file-parsing/26192
+func TestDataDirNestedDirectories(t *testing.T) {
+	t.Parallel()
+
+	var dd dataDir
+	dd.addSource("themes/mytheme/data/a.json", `["1", "2", "3"]`)
+	dd.addSource("data/test1/20/06/a.json", `{ "artist" : "Michael Brecker" }`)
+	dd.addSource("data/test1/20/05/b.json", `{ "artist" : "Charlie Parker" }`)
+
+	expected :=
+		map[string]interface{}{
+			"a":     []interface{}{"1", "2", "3"},
+			"test1": map[string]interface{}{"20": map[string]interface{}{"05": map[string]interface{}{"b": map[string]interface{}{"artist": "Charlie Parker"}}, "06": map[string]interface{}{"a": map[string]interface{}{"artist": "Michael Brecker"}}}},
+		}
+
+	doTestDataDir(t, dd, expected, "theme", "mytheme")
+}
+
 type dataDir struct {
 	sources [][2]string
 }
@@ -315,9 +330,7 @@ func doTestDataDir(t *testing.T, dd dataDir, expected interface{}, configKeyValu
 }
 
 func doTestDataDirImpl(t *testing.T, dd dataDir, expected interface{}, configKeyValues ...interface{}) (err string) {
-	var (
-		cfg, fs = newTestCfg()
-	)
+	cfg, fs := newTestCfg()
 
 	for i := 0; i < len(configKeyValues); i += 2 {
 		cfg.Set(configKeyValues[i].(string), configKeyValues[i+1])
@@ -349,7 +362,7 @@ func doTestDataDirImpl(t *testing.T, dd dataDir, expected interface{}, configKey
 
 	s := buildSingleSiteExpected(t, false, expectBuildError, depsCfg, BuildCfg{SkipRender: true})
 
-	if !expectBuildError && !reflect.DeepEqual(expected, s.Data) {
+	if !expectBuildError && !reflect.DeepEqual(expected, s.h.Data()) {
 		// This disabled code detects the situation described in the WARNING message below.
 		// The situation seems to only occur for TOML data with integer values.
 		// Perhaps the TOML parser returns ints in another type.
@@ -366,7 +379,7 @@ func doTestDataDirImpl(t *testing.T, dd dataDir, expected interface{}, configKey
 			}
 		*/
 
-		return fmt.Sprintf("Expected data:\n%v got\n%v\n\nExpected type structure:\n%#[1]v got\n%#[2]v", expected, s.Data)
+		return fmt.Sprintf("Expected data:\n%v got\n%v\n\nExpected type structure:\n%#[1]v got\n%#[2]v", expected, s.h.Data())
 	}
 
 	return
@@ -377,6 +390,7 @@ func TestDataFromShortcode(t *testing.T) {
 
 	var (
 		cfg, fs = newTestCfg()
+		c       = qt.New(t)
 	)
 
 	writeSource(t, fs, "data/hugo.toml", "slogan = \"Hugo Rocks!\"")
@@ -392,7 +406,7 @@ Slogan from shortcode: {{< d >}}
 	buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
 
 	content := readSource(t, fs, "public/c/index.html")
-	require.True(t, strings.Contains(content, "Slogan from template: Hugo Rocks!"), content)
-	require.True(t, strings.Contains(content, "Slogan from shortcode: Hugo Rocks!"), content)
 
+	c.Assert(content, qt.Contains, "Slogan from template: Hugo Rocks!")
+	c.Assert(content, qt.Contains, "Slogan from shortcode: Hugo Rocks!")
 }

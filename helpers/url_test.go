@@ -14,21 +14,17 @@
 package helpers
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/langs"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestURLize(t *testing.T) {
-
 	v := newTestCfg()
 	l := langs.NewDefaultLanguage(v)
-	p, _ := NewPathSpec(hugofs.NewMem(v), l)
+	p, _ := NewPathSpec(hugofs.NewMem(v), l, nil)
 
 	tests := []struct {
 		input    string
@@ -86,11 +82,25 @@ func doTestAbsURL(t *testing.T, defaultInSubDir, addLanguage, multilingual bool,
 		{"http//foo", "http://base/path", "http://base/path/MULTIhttp/foo"},
 	}
 
+	if multilingual && addLanguage && defaultInSubDir {
+		newTests := []struct {
+			input    string
+			baseURL  string
+			expected string
+		}{
+			{lang + "test", "http://base/", "http://base/" + lang + "/" + lang + "test"},
+			{"/" + lang + "test", "http://base/", "http://base/" + lang + "/" + lang + "test"},
+		}
+
+		tests = append(tests, newTests...)
+
+	}
+
 	for _, test := range tests {
 		v.Set("baseURL", test.baseURL)
 		v.Set("contentDir", "content")
 		l := langs.NewLanguage(lang, v)
-		p, _ := NewPathSpec(hugofs.NewMem(v), l)
+		p, _ := NewPathSpec(hugofs.NewMem(v), l, nil)
 
 		output := p.AbsURL(test.input, addLanguage)
 		expected := test.expected
@@ -100,29 +110,12 @@ func doTestAbsURL(t *testing.T, defaultInSubDir, addLanguage, multilingual bool,
 			} else {
 				expected = strings.Replace(expected, "MULTI", lang+"/", 1)
 			}
-
 		} else {
 			expected = strings.Replace(expected, "MULTI", "", 1)
 		}
 		if output != expected {
 			t.Fatalf("Expected %#v, got %#v\n", expected, output)
 		}
-	}
-}
-
-func TestIsAbsURL(t *testing.T) {
-	for i, this := range []struct {
-		a string
-		b bool
-	}{
-		{"http://gohugo.io", true},
-		{"https://gohugo.io", true},
-		{"//gohugo.io", true},
-		{"http//gohugo.io", false},
-		{"/content", false},
-		{"content", false},
-	} {
-		require.True(t, IsAbsURL(this.a) == this.b, fmt.Sprintf("Test %d", i))
 	}
 }
 
@@ -164,11 +157,24 @@ func doTestRelURL(t *testing.T, defaultInSubDir, addLanguage, multilingual bool,
 		{"//schemaless", "http://base/", false, "//schemaless"},
 	}
 
+	if multilingual && addLanguage && defaultInSubDir {
+		newTests := []struct {
+			input    string
+			baseURL  string
+			canonify bool
+			expected string
+		}{
+			{lang + "test", "http://base/", false, "/" + lang + "/" + lang + "test"},
+			{"/" + lang + "test", "http://base/", false, "/" + lang + "/" + lang + "test"},
+		}
+		tests = append(tests, newTests...)
+	}
+
 	for i, test := range tests {
 		v.Set("baseURL", test.baseURL)
 		v.Set("canonifyURLs", test.canonify)
 		l := langs.NewLanguage(lang, v)
-		p, _ := NewPathSpec(hugofs.NewMem(v), l)
+		p, _ := NewPathSpec(hugofs.NewMem(v), l, nil)
 
 		output := p.RelURL(test.input, addLanguage)
 
@@ -218,28 +224,6 @@ func TestSanitizeURL(t *testing.T) {
 	}
 }
 
-func TestMakePermalink(t *testing.T) {
-	type test struct {
-		host, link, output string
-	}
-
-	data := []test{
-		{"http://abc.com/foo", "post/bar", "http://abc.com/foo/post/bar"},
-		{"http://abc.com/foo/", "post/bar", "http://abc.com/foo/post/bar"},
-		{"http://abc.com", "post/bar", "http://abc.com/post/bar"},
-		{"http://abc.com", "bar", "http://abc.com/bar"},
-		{"http://abc.com/foo/bar", "post/bar", "http://abc.com/foo/bar/post/bar"},
-		{"http://abc.com/foo/bar", "post/bar/", "http://abc.com/foo/bar/post/bar/"},
-	}
-
-	for i, d := range data {
-		output := MakePermalink(d.host, d.link).String()
-		if d.output != output {
-			t.Errorf("Test #%d failed. Expected %q got %q", i, d.output, output)
-		}
-	}
-}
-
 func TestURLPrep(t *testing.T) {
 	type test struct {
 		ugly   bool
@@ -256,67 +240,11 @@ func TestURLPrep(t *testing.T) {
 		v := newTestCfg()
 		v.Set("uglyURLs", d.ugly)
 		l := langs.NewDefaultLanguage(v)
-		p, _ := NewPathSpec(hugofs.NewMem(v), l)
+		p, _ := NewPathSpec(hugofs.NewMem(v), l, nil)
 
 		output := p.URLPrep(d.input)
 		if d.output != output {
 			t.Errorf("Test #%d failed. Expected %q got %q", i, d.output, output)
 		}
 	}
-
-}
-
-func TestAddContextRoot(t *testing.T) {
-	tests := []struct {
-		baseURL  string
-		url      string
-		expected string
-	}{
-		{"http://example.com/sub/", "/foo", "/sub/foo"},
-		{"http://example.com/sub/", "/foo/index.html", "/sub/foo/index.html"},
-		{"http://example.com/sub1/sub2", "/foo", "/sub1/sub2/foo"},
-		{"http://example.com", "/foo", "/foo"},
-		// cannot guess that the context root is already added int the example below
-		{"http://example.com/sub/", "/sub/foo", "/sub/sub/foo"},
-		{"http://example.com/тря", "/трям/", "/тря/трям/"},
-		{"http://example.com", "/", "/"},
-		{"http://example.com/bar", "//", "/bar/"},
-	}
-
-	for _, test := range tests {
-		output := AddContextRoot(test.baseURL, test.url)
-		if output != test.expected {
-			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
-		}
-	}
-}
-
-func TestPretty(t *testing.T) {
-	assert.Equal(t, PrettifyURLPath("/section/name.html"), "/section/name/index.html")
-	assert.Equal(t, PrettifyURLPath("/section/sub/name.html"), "/section/sub/name/index.html")
-	assert.Equal(t, PrettifyURLPath("/section/name/"), "/section/name/index.html")
-	assert.Equal(t, PrettifyURLPath("/section/name/index.html"), "/section/name/index.html")
-	assert.Equal(t, PrettifyURLPath("/index.html"), "/index.html")
-	assert.Equal(t, PrettifyURLPath("/name.xml"), "/name/index.xml")
-	assert.Equal(t, PrettifyURLPath("/"), "/")
-	assert.Equal(t, PrettifyURLPath(""), "/")
-	assert.Equal(t, PrettifyURL("/section/name.html"), "/section/name")
-	assert.Equal(t, PrettifyURL("/section/sub/name.html"), "/section/sub/name")
-	assert.Equal(t, PrettifyURL("/section/name/"), "/section/name")
-	assert.Equal(t, PrettifyURL("/section/name/index.html"), "/section/name")
-	assert.Equal(t, PrettifyURL("/index.html"), "/")
-	assert.Equal(t, PrettifyURL("/name.xml"), "/name/index.xml")
-	assert.Equal(t, PrettifyURL("/"), "/")
-	assert.Equal(t, PrettifyURL(""), "/")
-}
-
-func TestUgly(t *testing.T) {
-	assert.Equal(t, Uglify("/section/name.html"), "/section/name.html")
-	assert.Equal(t, Uglify("/section/sub/name.html"), "/section/sub/name.html")
-	assert.Equal(t, Uglify("/section/name/"), "/section/name.html")
-	assert.Equal(t, Uglify("/section/name/index.html"), "/section/name.html")
-	assert.Equal(t, Uglify("/index.html"), "/index.html")
-	assert.Equal(t, Uglify("/name.xml"), "/name.xml")
-	assert.Equal(t, Uglify("/"), "/")
-	assert.Equal(t, Uglify(""), "/")
 }

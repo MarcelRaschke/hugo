@@ -14,22 +14,40 @@
 package compare
 
 import (
-	"fmt"
 	"path"
 	"reflect"
 	"runtime"
 	"testing"
 	"time"
 
-	"github.com/gohugoio/hugo/helpers"
+	"github.com/gohugoio/hugo/htesting/hqt"
 
+	qt "github.com/frankban/quicktest"
+	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/spf13/cast"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-type tstEqerType1 string
-type tstEqerType2 string
+type T struct {
+	NonEmptyInterfaceNil      I
+	NonEmptyInterfaceTypedNil I
+}
+
+type I interface {
+	Foo() string
+}
+
+func (t *T) Foo() string {
+	return "foo"
+}
+
+var testT = &T{
+	NonEmptyInterfaceTypedNil: (*T)(nil),
+}
+
+type (
+	tstEqerType1 string
+	tstEqerType2 string
+)
 
 func (t tstEqerType2) Eq(other interface{}) bool {
 	return cast.ToString(t) == cast.ToString(other)
@@ -46,6 +64,8 @@ func (t tstEqerType1) Eq(other interface{}) bool {
 func (t tstEqerType1) String() string {
 	return string(t)
 }
+
+type stringType string
 
 type tstCompareType int
 
@@ -64,10 +84,11 @@ func tstIsLt(tp tstCompareType) bool { return tp == tstLt || tp == tstLe }
 
 func TestDefaultFunc(t *testing.T) {
 	t.Parallel()
+	c := qt.New(t)
 
 	then := time.Now()
 	now := time.Now()
-	ns := New()
+	ns := New(false)
 
 	for i, test := range []struct {
 		dflt   interface{}
@@ -111,30 +132,57 @@ func TestDefaultFunc(t *testing.T) {
 		{then, now, now},
 		{then, time.Time{}, then},
 	} {
-		errMsg := fmt.Sprintf("[%d] %v", i, test)
+
+		eq := qt.CmpEquals(hqt.DeepAllowUnexported(test.dflt))
+
+		errMsg := qt.Commentf("[%d] %v", i, test)
 
 		result, err := ns.Default(test.dflt, test.given)
 
-		require.NoError(t, err, errMsg)
-		assert.Equal(t, result, test.expect, errMsg)
+		c.Assert(err, qt.IsNil, errMsg)
+		c.Assert(result, eq, test.expect, errMsg)
 	}
 }
 
 func TestCompare(t *testing.T) {
 	t.Parallel()
 
-	n := New()
+	n := New(false)
+
+	twoEq := func(a, b interface{}) bool {
+		return n.Eq(a, b)
+	}
+
+	twoGt := func(a, b interface{}) bool {
+		return n.Gt(a, b)
+	}
+
+	twoLt := func(a, b interface{}) bool {
+		return n.Lt(a, b)
+	}
+
+	twoGe := func(a, b interface{}) bool {
+		return n.Ge(a, b)
+	}
+
+	twoLe := func(a, b interface{}) bool {
+		return n.Le(a, b)
+	}
+
+	twoNe := func(a, b interface{}) bool {
+		return n.Ne(a, b)
+	}
 
 	for _, test := range []struct {
 		tstCompareType
 		funcUnderTest func(a, b interface{}) bool
 	}{
-		{tstGt, n.Gt},
-		{tstLt, n.Lt},
-		{tstGe, n.Ge},
-		{tstLe, n.Le},
-		{tstEq, n.Eq},
-		{tstNe, n.Ne},
+		{tstGt, twoGt},
+		{tstLt, twoLt},
+		{tstGe, twoGe},
+		{tstLe, twoLe},
+		{tstEq, twoEq},
+		{tstNe, twoNe},
 	} {
 		doTestCompare(t, test.tstCompareType, test.funcUnderTest)
 	}
@@ -173,18 +221,23 @@ func doTestCompare(t *testing.T, tp tstCompareType, funcUnderTest func(a, b inte
 		{tstEqerType1("a"), tstEqerType2("a"), 0},
 		{tstEqerType2("a"), tstEqerType1("a"), 0},
 		{tstEqerType2("a"), tstEqerType1("b"), -1},
-		{helpers.MustParseHugoVersion("0.32.1").Version(), helpers.MustParseHugoVersion("0.32").Version(), 1},
-		{helpers.MustParseHugoVersion("0.35").Version(), helpers.MustParseHugoVersion("0.32").Version(), 1},
-		{helpers.MustParseHugoVersion("0.36").Version(), helpers.MustParseHugoVersion("0.36").Version(), 0},
-		{helpers.MustParseHugoVersion("0.32").Version(), helpers.MustParseHugoVersion("0.36").Version(), -1},
-		{helpers.MustParseHugoVersion("0.32").Version(), "0.36", -1},
-		{"0.36", helpers.MustParseHugoVersion("0.32").Version(), 1},
-		{"0.36", helpers.MustParseHugoVersion("0.36").Version(), 0},
-		{"0.37", helpers.MustParseHugoVersion("0.37-DEV").Version(), 1},
-		{"0.37-DEV", helpers.MustParseHugoVersion("0.37").Version(), -1},
-		{"0.36", helpers.MustParseHugoVersion("0.37-DEV").Version(), -1},
-		{"0.37-DEV", helpers.MustParseHugoVersion("0.37-DEV").Version(), 0},
+		{hugo.MustParseVersion("0.32.1").Version(), hugo.MustParseVersion("0.32").Version(), 1},
+		{hugo.MustParseVersion("0.35").Version(), hugo.MustParseVersion("0.32").Version(), 1},
+		{hugo.MustParseVersion("0.36").Version(), hugo.MustParseVersion("0.36").Version(), 0},
+		{hugo.MustParseVersion("0.32").Version(), hugo.MustParseVersion("0.36").Version(), -1},
+		{hugo.MustParseVersion("0.32").Version(), "0.36", -1},
+		{"0.36", hugo.MustParseVersion("0.32").Version(), 1},
+		{"0.36", hugo.MustParseVersion("0.36").Version(), 0},
+		{"0.37", hugo.MustParseVersion("0.37-DEV").Version(), 1},
+		{"0.37-DEV", hugo.MustParseVersion("0.37").Version(), -1},
+		{"0.36", hugo.MustParseVersion("0.37-DEV").Version(), -1},
+		{"0.37-DEV", hugo.MustParseVersion("0.37-DEV").Version(), 0},
+		// https://github.com/gohugoio/hugo/issues/5905
+		{nil, nil, 0},
+		{testT.NonEmptyInterfaceNil, nil, 0},
+		{testT.NonEmptyInterfaceTypedNil, nil, 0},
 	} {
+
 		result := funcUnderTest(test.left, test.right)
 		success := false
 
@@ -207,9 +260,153 @@ func doTestCompare(t *testing.T, tp tstCompareType, funcUnderTest func(a, b inte
 		}
 
 		if !success {
-			t.Errorf("[%d][%s] %v compared to %v: %t", i, path.Base(runtime.FuncForPC(reflect.ValueOf(funcUnderTest).Pointer()).Name()), test.left, test.right, result)
+			t.Fatalf("[%d][%s] %v compared to %v: %t", i, path.Base(runtime.FuncForPC(reflect.ValueOf(funcUnderTest).Pointer()).Name()), test.left, test.right, result)
 		}
 	}
+}
+
+func TestEqualExtend(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	ns := New(false)
+
+	for _, test := range []struct {
+		first  interface{}
+		others []interface{}
+		expect bool
+	}{
+		{1, []interface{}{1, 2}, true},
+		{1, []interface{}{2, 1}, true},
+		{1, []interface{}{2, 3}, false},
+		{tstEqerType1("a"), []interface{}{tstEqerType1("a"), tstEqerType1("b")}, true},
+		{tstEqerType1("a"), []interface{}{tstEqerType1("b"), tstEqerType1("a")}, true},
+		{tstEqerType1("a"), []interface{}{tstEqerType1("b"), tstEqerType1("c")}, false},
+	} {
+
+		result := ns.Eq(test.first, test.others...)
+
+		c.Assert(result, qt.Equals, test.expect)
+	}
+}
+
+func TestNotEqualExtend(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	ns := New(false)
+
+	for _, test := range []struct {
+		first  interface{}
+		others []interface{}
+		expect bool
+	}{
+		{1, []interface{}{2, 3}, true},
+		{1, []interface{}{2, 1}, false},
+		{1, []interface{}{1, 2}, false},
+	} {
+		result := ns.Ne(test.first, test.others...)
+		c.Assert(result, qt.Equals, test.expect)
+	}
+}
+
+func TestGreaterEqualExtend(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	ns := New(false)
+
+	for _, test := range []struct {
+		first  interface{}
+		others []interface{}
+		expect bool
+	}{
+		{5, []interface{}{2, 3}, true},
+		{5, []interface{}{5, 5}, true},
+		{3, []interface{}{4, 2}, false},
+		{3, []interface{}{2, 4}, false},
+	} {
+		result := ns.Ge(test.first, test.others...)
+		c.Assert(result, qt.Equals, test.expect)
+	}
+}
+
+func TestGreaterThanExtend(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	ns := New(false)
+
+	for _, test := range []struct {
+		first  interface{}
+		others []interface{}
+		expect bool
+	}{
+		{5, []interface{}{2, 3}, true},
+		{5, []interface{}{5, 4}, false},
+		{3, []interface{}{4, 2}, false},
+	} {
+		result := ns.Gt(test.first, test.others...)
+		c.Assert(result, qt.Equals, test.expect)
+	}
+}
+
+func TestLessEqualExtend(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	ns := New(false)
+
+	for _, test := range []struct {
+		first  interface{}
+		others []interface{}
+		expect bool
+	}{
+		{1, []interface{}{2, 3}, true},
+		{1, []interface{}{1, 2}, true},
+		{2, []interface{}{1, 2}, false},
+		{3, []interface{}{2, 4}, false},
+	} {
+		result := ns.Le(test.first, test.others...)
+		c.Assert(result, qt.Equals, test.expect)
+	}
+}
+
+func TestLessThanExtend(t *testing.T) {
+	t.Parallel()
+	c := qt.New(t)
+
+	ns := New(false)
+
+	for _, test := range []struct {
+		first  interface{}
+		others []interface{}
+		expect bool
+	}{
+		{1, []interface{}{2, 3}, true},
+		{1, []interface{}{1, 2}, false},
+		{2, []interface{}{1, 2}, false},
+		{3, []interface{}{2, 4}, false},
+	} {
+		result := ns.Lt(test.first, test.others...)
+		c.Assert(result, qt.Equals, test.expect)
+	}
+}
+
+func TestCase(t *testing.T) {
+	c := qt.New(t)
+	n := New(false)
+
+	c.Assert(n.Eq("az", "az"), qt.Equals, true)
+	c.Assert(n.Eq("az", stringType("az")), qt.Equals, true)
+}
+
+func TestStringType(t *testing.T) {
+	c := qt.New(t)
+	n := New(true)
+
+	c.Assert(n.Lt("az", "Za"), qt.Equals, true)
+	c.Assert(n.Gt("ab", "Ab"), qt.Equals, true)
 }
 
 func TestTimeUnix(t *testing.T) {
@@ -236,10 +433,10 @@ func TestTimeUnix(t *testing.T) {
 }
 
 func TestConditional(t *testing.T) {
-	assert := require.New(t)
-	n := New()
+	c := qt.New(t)
+	n := New(false)
 	a, b := "a", "b"
 
-	assert.Equal(a, n.Conditional(true, a, b))
-	assert.Equal(b, n.Conditional(false, a, b))
+	c.Assert(n.Conditional(true, a, b), qt.Equals, a)
+	c.Assert(n.Conditional(false, a, b), qt.Equals, b)
 }

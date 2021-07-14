@@ -36,14 +36,13 @@ hugo is the main command, used to build your Hugo site.
 Hugo is a Fast and Flexible Static Site Generator
 built with love by spf13 and friends in Go.
 
-Complete documentation is available at http://gohugo.io/.
+Complete documentation is available at https://gohugo.io/.
 
 Usage:
   hugo [flags]
   hugo [command]
 
 Available Commands:
-  benchmark   Benchmark Hugo by building a site a number of times.
   check       Contains some verification checks
   config      Print the site configuration
   convert     Convert your content to different formats
@@ -57,43 +56,43 @@ Available Commands:
   version     Print the version number of Hugo
 
 Flags:
-  -b, --baseURL string             hostname (and path) to the root, e.g. http://spf13.com/
-  -D, --buildDrafts                include content marked as draft
-  -E, --buildExpired               include expired content
-  -F, --buildFuture                include content with publishdate in the future
-      --cacheDir string            filesystem path to cache directory. Defaults: $TMPDIR/hugo_cache/
-      --canonifyURLs               (deprecated) if true, all relative URLs will be canonicalized using baseURL
-      --cleanDestinationDir        remove files from destination not found in static directories
-      --config string              config file (default is path/config.yaml|json|toml)
-  -c, --contentDir string          filesystem path to content directory
-      --debug                      debug output
-  -d, --destination string         filesystem path to write files to
-      --disableKinds stringSlice   disable different kind of pages (home, RSS etc.)
-      --enableGitInfo              add Git revision, date and author info to the pages
-      --forceSyncStatic            copy all files when static is changed.
-      --gc                         enable to run some cleanup tasks (remove unused cache files) after the build
-  -h, --help                       help for hugo
-      --i18n-warnings              print missing translations
-      --ignoreCache                ignores the cache directory
-  -l, --layoutDir string           filesystem path to layout directory
-      --log                        enable Logging
-      --logFile string             log File path (if set, logging enabled automatically)
-      --noChmod                    don't sync permission mode of files
-      --noTimes                    don't sync modification time of files
-      --pluralizeListTitles        (deprecated) pluralize titles in lists using inflect (default true)
-      --preserveTaxonomyNames      (deprecated) preserve taxonomy names as written ("Gérard Depardieu" vs "gerard-depardieu")
-      --quiet                      build in quiet mode
-      --renderToMemory             render to memory (only useful for benchmark testing)
-  -s, --source string              filesystem path to read files relative from
-      --stepAnalysis               display memory and timing of different steps of the program
-      --templateMetrics            display metrics about template executions
-      --templateMetricsHints       calculate some improvement hints when combined with --templateMetrics
-  -t, --theme string               theme to use (located in /themes/THEMENAME/)
-      --themesDir string           filesystem path to themes directory
-      --uglyURLs                   (deprecated) if true, use /filename.html instead of /filename/
-  -v, --verbose                    verbose output
-      --verboseLog                 verbose logging
-  -w, --watch                      watch filesystem for changes and recreate as needed
+  -b, --baseURL string         hostname (and path) to the root, e.g. https://spf13.com/
+  -D, --buildDrafts            include content marked as draft
+  -E, --buildExpired           include expired content
+  -F, --buildFuture            include content with publishdate in the future
+      --cacheDir string        filesystem path to cache directory. Defaults: $TMPDIR/hugo_cache/
+      --cleanDestinationDir    remove files from destination not found in static directories
+      --config string          config file (default is path/config.yaml|json|toml)
+      --configDir string       config dir (default "config")
+  -c, --contentDir string      filesystem path to content directory
+      --debug                  debug output
+  -d, --destination string     filesystem path to write files to
+      --disableKinds strings   disable different kind of pages (home, RSS etc.)
+      --enableGitInfo          add Git revision, date and author info to the pages
+  -e, --environment string     build environment
+      --forceSyncStatic        copy all files when static is changed.
+      --gc                     enable to run some cleanup tasks (remove unused cache files) after the build
+  -h, --help                   help for hugo
+      --i18n-warnings          print missing translations
+      --ignoreCache            ignores the cache directory
+  -l, --layoutDir string       filesystem path to layout directory
+      --log                    enable Logging
+      --logFile string         log File path (if set, logging enabled automatically)
+      --minify                 minify any supported output format (HTML, XML etc.)
+      --noChmod                don't sync permission mode of files
+      --noTimes                don't sync modification time of files
+      --path-warnings          print warnings on duplicate target paths etc.
+      --quiet                  build in quiet mode
+      --renderToMemory         render to memory (only useful for benchmark testing)
+  -s, --source string          filesystem path to read files relative from
+      --templateMetrics        display metrics about template executions
+      --templateMetricsHints   calculate some improvement hints when combined with --templateMetrics
+  -t, --theme strings          themes to use (located in /themes/THEMENAME/)
+      --themesDir string       filesystem path to themes directory
+      --trace file             write trace to file (not useful in general)
+  -v, --verbose                verbose output
+      --verboseLog             verbose logging
+  -w, --watch                  watch filesystem for changes and recreate as needed
 
 Use "hugo [command] --help" for more information about a command.
 ```
@@ -168,6 +167,11 @@ Most Hugo builds are so fast that you may not notice the change unless looking d
 Hugo injects the LiveReload `<script>` before the closing `</body>` in your templates and will therefore not work if this tag is not present..
 {{% /note %}}
 
+### Redirect automatically to the page you just saved
+
+When you are working with more than one document and want to see the markup as real-time as possible it's not ideal to keep jumping between them. 
+Fortunately Hugo has an easy, embedded and simple solution for this. It's the flag `--navigateToChanged`.
+
 ### Disable LiveReload
 
 LiveReload works by injecting JavaScript into the pages Hugo generates. The script creates a connection from the browser's web socket client to the Hugo web socket server.
@@ -184,15 +188,11 @@ Or...
 hugo server --disableLiveReload
 ```
 
-The latter flag can be omitted by adding the following key-value to  your `config.toml` or `config.yml` file, respectively:
+The latter flag can be omitted by adding the following:
 
-```
+{{< code-toggle file="config" >}}
 disableLiveReload = true
-```
-
-```
-disableLiveReload: true
-```
+{{< /code-toggle >}}
 
 ## Deploy Your Website
 
@@ -204,23 +204,6 @@ Since Hugo generates a static website, your site can be hosted *anywhere* using 
 Running `hugo` *does not* remove generated files before building. This means that you should delete your `public/` directory (or the publish directory you specified via flag or configuration file) before running the `hugo` command. If you do not remove these files, you run the risk of the wrong files (e.g., drafts or future posts) being left in the generated site.
 {{% /warning %}}
 
-### Dev vs Deploy Destinations
-
-Hugo does not remove generated files before building. An easy workaround is to use different directories for development and production.
-
-To start a server that builds draft content (helpful for editing), you can specify a different destination; e.g., a `dev/` directory:
-
-```
-hugo server -wDs ~/Code/hugo/docs -d dev
-```
-
-When the content is ready for publishing, use the default `public/` dir:
-
-```
-hugo -s ~/Code/hugo/docs
-```
-
-This prevents draft content from accidentally becoming available.
 
 [commands]: /commands/
 [config]: /getting-started/configuration/

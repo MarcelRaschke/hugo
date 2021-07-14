@@ -14,30 +14,33 @@
 package source
 
 import (
-	"os"
+	"fmt"
+	"path/filepath"
 	"runtime"
 	"testing"
 
+	"github.com/gohugoio/hugo/config"
+
+	"github.com/gohugoio/hugo/modules"
+
+	"github.com/gohugoio/hugo/langs"
+
+	"github.com/spf13/afero"
+
+	qt "github.com/frankban/quicktest"
 	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
-
-	"github.com/spf13/viper"
 )
 
 func TestEmptySourceFilesystem(t *testing.T) {
+	c := qt.New(t)
 	ss := newTestSourceSpec()
-	src := ss.NewFilesystem("Empty")
-	if len(src.Files()) != 0 {
+	src := ss.NewFilesystem("")
+	files, err := src.Files()
+	c.Assert(err, qt.IsNil)
+	if len(files) != 0 {
 		t.Errorf("new filesystem should contain 0 files.")
 	}
-}
-
-type TestPath struct {
-	filename string
-	logical  string
-	content  string
-	section  string
-	dir      string
 }
 
 func TestUnicodeNorm(t *testing.T) {
@@ -45,6 +48,8 @@ func TestUnicodeNorm(t *testing.T) {
 		// Normalization code is only for Mac OS, since it is not necessary for other OSes.
 		return
 	}
+
+	c := qt.New(t)
 
 	paths := []struct {
 		NFC string
@@ -55,21 +60,24 @@ func TestUnicodeNorm(t *testing.T) {
 	}
 
 	ss := newTestSourceSpec()
-	var fi os.FileInfo
+	fi := hugofs.NewFileMetaInfo(nil, hugofs.FileMeta{})
 
-	for _, path := range paths {
-		src := ss.NewFilesystem("base")
+	for i, path := range paths {
+		base := fmt.Sprintf("base%d", i)
+		c.Assert(afero.WriteFile(ss.Fs.Source, filepath.Join(base, path.NFD), []byte("some data"), 0777), qt.IsNil)
+		src := ss.NewFilesystem(base)
 		_ = src.add(path.NFD, fi)
-		f := src.Files()[0]
+		files, err := src.Files()
+		c.Assert(err, qt.IsNil)
+		f := files[0]
 		if f.BaseFileName() != path.NFC {
-			t.Fatalf("file name in NFD form should be normalized (%s)", path.NFC)
+			t.Fatalf("file %q name in NFD form should be normalized (%s)", f.BaseFileName(), path.NFC)
 		}
 	}
-
 }
 
-func newTestConfig() *viper.Viper {
-	v := viper.New()
+func newTestConfig() config.Provider {
+	v := config.New()
 	v.Set("contentDir", "content")
 	v.Set("dataDir", "data")
 	v.Set("i18nDir", "i18n")
@@ -78,13 +86,23 @@ func newTestConfig() *viper.Viper {
 	v.Set("resourceDir", "resources")
 	v.Set("publishDir", "public")
 	v.Set("assetDir", "assets")
+	_, err := langs.LoadLanguageSettings(v, nil)
+	if err != nil {
+		panic(err)
+	}
+	mod, err := modules.CreateProjectModule(v)
+	if err != nil {
+		panic(err)
+	}
+	v.Set("allModules", modules.Modules{mod})
+
 	return v
 }
 
 func newTestSourceSpec() *SourceSpec {
 	v := newTestConfig()
-	fs := hugofs.NewMem(v)
-	ps, err := helpers.NewPathSpec(fs, v)
+	fs := hugofs.NewFrom(hugofs.NewBaseFileDecorator(afero.NewMemMapFs()), v)
+	ps, err := helpers.NewPathSpec(fs, v, nil)
 	if err != nil {
 		panic(err)
 	}

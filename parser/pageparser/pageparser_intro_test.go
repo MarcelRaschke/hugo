@@ -27,7 +27,7 @@ type lexerTest struct {
 }
 
 func nti(tp ItemType, val string) Item {
-	return Item{tp, 0, []byte(val)}
+	return Item{tp, 0, []byte(val), false}
 }
 
 var (
@@ -38,7 +38,6 @@ var (
 	tstFrontMatterJSON     = nti(TypeFrontMatterJSON, tstJSON+"\r\n")
 	tstSomeText            = nti(tText, "\nSome text.\n")
 	tstSummaryDivider      = nti(TypeLeadSummaryDivider, "<!--more-->\n")
-	tstHtmlStart           = nti(TypeHTMLStart, "<")
 	tstNewline             = nti(tText, "\n")
 
 	tstORG = `
@@ -55,8 +54,8 @@ var crLfReplacer = strings.NewReplacer("\r", "#", "\n", "$")
 var frontMatterTests = []lexerTest{
 	{"empty", "", []Item{tstEOF}},
 	{"Byte order mark", "\ufeff\nSome text.\n", []Item{nti(TypeIgnore, "\ufeff"), tstSomeText, tstEOF}},
-	{"HTML Document", `  <html>  `, []Item{nti(tText, "  "), tstHtmlStart, nti(tText, "html>  "), tstEOF}},
-	{"HTML Document with shortcode", `<html>{{< sc1 >}}</html>`, []Item{tstHtmlStart, nti(tText, "html>"), tstLeftNoMD, tstSC1, tstRightNoMD, nti(tText, "</html>"), tstEOF}},
+	{"HTML Document", `  <html>  `, []Item{nti(tError, "plain HTML documents not supported")}},
+	{"HTML Document with shortcode", `<html>{{< sc1 >}}</html>`, []Item{nti(tError, "plain HTML documents not supported")}},
 	{"No front matter", "\nSome text.\n", []Item{tstSomeText, tstEOF}},
 	{"YAML front matter", "---\nfoo: \"bar\"\n---\n\nSome text.\n", []Item{tstFrontMatterYAML, tstSomeText, tstEOF}},
 	{"YAML empty front matter", "---\n---\n\nSome text.\n", []Item{nti(TypeFrontMatterYAML, ""), tstSomeText, tstEOF}},
@@ -88,8 +87,8 @@ func TestFrontMatter(t *testing.T) {
 	}
 }
 
-func collect(input []byte, skipFrontMatter bool, stateStart stateFunc) (items []Item) {
-	l := newPageLexer(input, 0, stateStart)
+func collectWithConfig(input []byte, skipFrontMatter bool, stateStart stateFunc, cfg Config) (items []Item) {
+	l := newPageLexer(input, stateStart, cfg)
 	l.run()
 	t := l.newIterator()
 
@@ -103,6 +102,12 @@ func collect(input []byte, skipFrontMatter bool, stateStart stateFunc) (items []
 	return
 }
 
+func collect(input []byte, skipFrontMatter bool, stateStart stateFunc) (items []Item) {
+	var cfg Config
+
+	return collectWithConfig(input, skipFrontMatter, stateStart, cfg)
+}
+
 // no positional checking, for now ...
 func equal(i1, i2 []Item) bool {
 	if len(i1) != len(i2) {
@@ -112,6 +117,7 @@ func equal(i1, i2 []Item) bool {
 		if i1[k].Type != i2[k].Type {
 			return false
 		}
+
 		if !reflect.DeepEqual(i1[k].Val, i2[k].Val) {
 			return false
 		}

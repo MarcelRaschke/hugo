@@ -1,10 +1,9 @@
 ---
 title: Taxonomies
 linktitle:
-description: Hugo includes support for user-defined taxonomies to help you  demonstrate logical relationships between content for the end users of your website.
+description: Hugo includes support for user-defined taxonomies.
 date: 2017-02-01
 publishdate: 2017-02-01
-lastmod: 2017-02-01
 keywords: [taxonomies,metadata,front matter,terms]
 categories: [content management]
 menu:
@@ -32,7 +31,6 @@ Term
 Value
 : a piece of content assigned to a term
 
-{{< youtube pCPCQgqC8RA >}}
 
 ## Example Taxonomy: Movie Website
 
@@ -86,7 +84,7 @@ Moonrise Kingdom            <- Value
 
 Hugo natively supports taxonomies.
 
-Without adding a single line to your [site config][config] file, Hugo will automatically create taxonomies for `tags` and `categories`. That would be same as manually [configuring your taxonomies](#configuring-taxonomies) as below:
+Without adding a single line to your [site config][config] file, Hugo will automatically create taxonomies for `tags` and `categories`. That would be the same as manually [configuring your taxonomies](#configuring-taxonomies) as below:
 
 {{< code-toggle copy="false" >}}
 [taxonomies]
@@ -97,8 +95,12 @@ Without adding a single line to your [site config][config] file, Hugo will autom
 If you do not want Hugo to create any taxonomies, set `disableKinds` in your [site config][config] to the following:
 
 {{< code-toggle copy="false" >}}
-disableKinds = ["taxonomy","taxonomyTerm"]
+disableKinds = ["taxonomy","term"]
 {{</ code-toggle >}}
+
+{{< new-in "0.73.0" >}} We have fixed the before confusing page kinds used for taxonomies (see the listing below) to be in line with the terms used when we talk about taxonomies. We have been careful to avoid site breakage, and you should get an ERROR in the console if you need to adjust your `disableKinds` section.
+
+{{% page-kinds %}}
 
 ### Default Destinations
 
@@ -107,7 +109,7 @@ When taxonomies are used---and [taxonomy templates][] are provided---Hugo will a
 * A single page at `example.com/categories/` that lists all the [terms within the taxonomy][]
 * [Individual taxonomy list pages][taxonomy templates] (e.g., `/categories/development/`) for each of the terms that shows a listing of all pages marked as part of that taxonomy within any content file's [front matter][]
 
-## Configure Taxonomies {#configuring-taxonomies}
+## Configure Taxonomies
 
 Custom taxonomies other than the [defaults](#default-taxonomies) must be defined in your [site config][config] before they can be used throughout the site. You need to provide both the plural and singular labels for each taxonomy. For example, `singular key = "plural value"` for TOML and `singular key: "plural value"` for YAML.
 
@@ -135,24 +137,16 @@ If you want to have just the default `tags` taxonomy, and remove the `categories
 
 If you want to disable all taxonomies altogether, see the use of `disableKinds` in [Hugo Taxonomy Defaults](#default-taxonomies).
 
-### Preserve Taxonomy Values
-
-By default, taxonomy names are normalized.
-
-Therefore, if you want to have a taxonomy term with special characters such as `Gérard Depardieu` instead of `Gerard Depardieu`, set the value for `preserveTaxonomyNames` to `true` in your [site config][config]. Hugo will then preserve special characters in taxonomy values but will still normalize them in URLs.
-
-Note that if you use `preserveTaxonomyNames` and intend to manually construct URLs to the archive pages, you will need to pass the taxonomy values through the [`urlize` template function][].
-
 {{% note %}}
 You can add content and front matter to your taxonomy list and taxonomy terms pages. See [Content Organization](/content-management/organization/) for more information on how to add an `_index.md` for this purpose.
 
 Much like regular pages, taxonomy list [permalinks](/content-management/urls/) are configurable, but taxonomy term page permalinks are not.
 {{% /note %}}
 
-{{% warning "`preserveTaxonomyNames` behaviour change" %}}
-Before 0.49, Hugo would make the first character upper case for the taxonomy values for titles even if `preserveTaxonomyNames` was active. This no longer the case, which (for instance) makes it possible to have fully lower-case values.
+{{% warning %}}
+The configuration option `preserveTaxonomyNames` was removed in Hugo 0.55.
 
-If you actually need to title-ize these values, you can do so using the `strings.FirstUpper` template function.
+You can now use `.Page.Title` on the relevant taxonomy node to get the original value.
 {{% /warning %}}
 
 ## Add Taxonomies to Content
@@ -198,18 +192,17 @@ By using taxonomic weight, the same piece of content can appear in different pos
 Currently taxonomies only support the [default `weight => date` ordering of list content](/templates/lists/#default-weight-date). For more information, see the documentation on [taxonomy templates](/templates/taxonomy-templates/).
 {{% /note %}}
 
-## Add custom metadata to a Taxonomy Term
+## Add custom metadata to a Taxonomy or Term
 
-If you need to add custom metadata to your taxonomy terms, you will need to create a page for that term at `/content/<TAXONOMY>/<TERM>/_index.md` and add your metadata in it's front matter. Continuing with our 'Actors' example, let's say you want to add a wikipedia page link to each actor. Your terms pages would be something like this:
+If you need to add custom metadata to your taxonomy terms, you will need to create a page for that term at `/content/<TAXONOMY>/<TERM>/_index.md` and add your metadata in it's front matter. Continuing with our 'Actors' example, let's say you want to add a Wikipedia page link to each actor. Your terms pages would be something like this:
 
 {{< code file="/content/actors/bruce-willis/_index.md" >}}
-  ---
-  title: "Bruce Willis"
-  wikipedia: "https://en.wikipedia.org/wiki/Bruce_Willis"
-  ---
+---
+title: "Bruce Willis"
+wikipedia: "https://en.wikipedia.org/wiki/Bruce_Willis"
+---
 {{< /code >}}
 
-You can later use your custom metadata as shown in the [Taxonomy Terms Templates documentation](/templates/taxonomy-templates/#displaying-custom-metadata-in-taxonomy-terms-templates).
 
 [`urlize` template function]: /functions/urlize/
 [content section]: /content-management/sections/

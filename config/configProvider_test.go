@@ -16,13 +16,12 @@ package config
 import (
 	"testing"
 
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestGetStringSlicePreserveString(t *testing.T) {
-	assert := require.New(t)
-	cfg := viper.New()
+	c := qt.New(t)
+	cfg := New()
 
 	s := "This is a string"
 	sSlice := []string{"This", "is", "a", "slice"}
@@ -30,7 +29,7 @@ func TestGetStringSlicePreserveString(t *testing.T) {
 	cfg.Set("s1", s)
 	cfg.Set("s2", sSlice)
 
-	assert.Equal([]string{s}, GetStringSlicePreserveString(cfg, "s1"))
-	assert.Equal(sSlice, GetStringSlicePreserveString(cfg, "s2"))
-	assert.Nil(GetStringSlicePreserveString(cfg, "s3"))
+	c.Assert(GetStringSlicePreserveString(cfg, "s1"), qt.DeepEquals, []string{s})
+	c.Assert(GetStringSlicePreserveString(cfg, "s2"), qt.DeepEquals, sSlice)
+	c.Assert(GetStringSlicePreserveString(cfg, "s3"), qt.IsNil)
 }

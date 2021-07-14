@@ -1,4 +1,4 @@
-// Copyright 2017-present The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,17 +19,16 @@ import (
 	"strings"
 	"testing"
 
+	qt "github.com/frankban/quicktest"
 	"github.com/gohugoio/hugo/deps"
-	"github.com/stretchr/testify/require"
+	"github.com/gohugoio/hugo/resources/page"
 )
 
 func TestNestedSections(t *testing.T) {
-	t.Parallel()
-
 	var (
-		assert  = require.New(t)
+		c       = qt.New(t)
 		cfg, fs = newTestCfg()
-		th      = testHelper{cfg, fs, t}
+		th      = newTestHelper(cfg, fs, t)
 	)
 
 	cfg.Set("permalinks", map[string]string{
@@ -117,199 +116,206 @@ PAG|{{ .Title }}|{{ $sect.InSection . }}
 
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
 
-	require.Len(t, s.RegularPages, 21)
+	c.Assert(len(s.RegularPages()), qt.Equals, 21)
 
 	tests := []struct {
 		sections string
-		verify   func(p *Page)
+		verify   func(c *qt.C, p page.Page)
 	}{
-		{"elsewhere", func(p *Page) {
-			assert.Len(p.Pages, 1)
-			for _, p := range p.Pages {
-				assert.Equal([]string{"elsewhere"}, p.sections)
+		{"elsewhere", func(c *qt.C, p page.Page) {
+			c.Assert(len(p.Pages()), qt.Equals, 1)
+			for _, p := range p.Pages() {
+				c.Assert(p.SectionsPath(), qt.Equals, "elsewhere")
 			}
 		}},
-		{"post", func(p *Page) {
-			assert.Len(p.Pages, 2)
-			for _, p := range p.Pages {
-				assert.Equal("post", p.Section())
+		{"post", func(c *qt.C, p page.Page) {
+			c.Assert(len(p.Pages()), qt.Equals, 2)
+			for _, p := range p.Pages() {
+				c.Assert(p.Section(), qt.Equals, "post")
 			}
 		}},
-		{"empty1", func(p *Page) {
+		{"empty1", func(c *qt.C, p page.Page) {
 			// > b,c
-			assert.NotNil(p.s.getPage(KindSection, "empty1", "b"))
-			assert.NotNil(p.s.getPage(KindSection, "empty1", "b", "c"))
-
+			c.Assert(getPage(p, "/empty1/b"), qt.IsNil) // No _index.md page.
+			c.Assert(getPage(p, "/empty1/b/c"), qt.Not(qt.IsNil))
 		}},
-		{"empty2", func(p *Page) {
-			// > b,c,d where b and d have content files.
-			b := p.s.getPage(KindSection, "empty2", "b")
-			assert.NotNil(b)
-			assert.Equal("T40_-1", b.title)
-			c := p.s.getPage(KindSection, "empty2", "b", "c")
-			assert.NotNil(c)
-			assert.Equal("Cs", c.title)
-			d := p.s.getPage(KindSection, "empty2", "b", "c", "d")
-			assert.NotNil(d)
-			assert.Equal("T41_-1", d.title)
+		{"empty2", func(c *qt.C, p page.Page) {
+			// > b,c,d where b and d have _index.md files.
+			b := getPage(p, "/empty2/b")
+			c.Assert(b, qt.Not(qt.IsNil))
+			c.Assert(b.Title(), qt.Equals, "T40_-1")
 
-			assert.False(c.Eq(d))
-			assert.True(c.Eq(c))
-			assert.False(c.Eq("asdf"))
+			cp := getPage(p, "/empty2/b/c")
+			c.Assert(cp, qt.IsNil) // No _index.md
 
+			d := getPage(p, "/empty2/b/c/d")
+			c.Assert(d, qt.Not(qt.IsNil))
+			c.Assert(d.Title(), qt.Equals, "T41_-1")
+
+			c.Assert(cp.Eq(d), qt.Equals, false)
+			c.Assert(cp.Eq(cp), qt.Equals, true)
+			c.Assert(cp.Eq("asdf"), qt.Equals, false)
 		}},
-		{"empty3", func(p *Page) {
+		{"empty3", func(c *qt.C, p page.Page) {
 			// b,c,d with regular page in b
-			b := p.s.getPage(KindSection, "empty3", "b")
-			assert.NotNil(b)
-			assert.Len(b.Pages, 1)
-			assert.Equal("empty3.md", b.Pages[0].File.LogicalName())
-
+			b := getPage(p, "/empty3/b")
+			c.Assert(b, qt.IsNil) // No _index.md
+			e3 := getPage(p, "/empty3/b/empty3")
+			c.Assert(e3, qt.Not(qt.IsNil))
+			c.Assert(e3.File().LogicalName(), qt.Equals, "empty3.md")
 		}},
-		{"empty3", func(p *Page) {
-			xxx := p.s.getPage(KindPage, "empty3", "nil")
-			assert.Nil(xxx)
-			assert.Equal(xxx.Eq(nil), true)
+		{"empty3", func(c *qt.C, p page.Page) {
+			xxx := getPage(p, "/empty3/nil")
+			c.Assert(xxx, qt.IsNil)
 		}},
-		{"top", func(p *Page) {
-			assert.Equal("Tops", p.title)
-			assert.Len(p.Pages, 2)
-			assert.Equal("mypage2.md", p.Pages[0].LogicalName())
-			assert.Equal("mypage3.md", p.Pages[1].LogicalName())
+		{"top", func(c *qt.C, p page.Page) {
+			c.Assert(p.Title(), qt.Equals, "Tops")
+			c.Assert(len(p.Pages()), qt.Equals, 2)
+			c.Assert(p.Pages()[0].File().LogicalName(), qt.Equals, "mypage2.md")
+			c.Assert(p.Pages()[1].File().LogicalName(), qt.Equals, "mypage3.md")
 			home := p.Parent()
-			assert.True(home.IsHome())
-			assert.Len(p.Sections(), 0)
-			assert.Equal(home, home.CurrentSection())
+			c.Assert(home.IsHome(), qt.Equals, true)
+			c.Assert(len(p.Sections()), qt.Equals, 0)
+			c.Assert(home.CurrentSection(), qt.Equals, home)
 			active, err := home.InSection(home)
-			assert.NoError(err)
-			assert.True(active)
-			assert.Equal(p, p.FirstSection())
+			c.Assert(err, qt.IsNil)
+			c.Assert(active, qt.Equals, true)
+			c.Assert(p.FirstSection(), qt.Equals, p)
 		}},
-		{"l1", func(p *Page) {
-			assert.Equal("L1s", p.title)
-			assert.Len(p.Pages, 2)
-			assert.True(p.Parent().IsHome())
-			assert.Len(p.Sections(), 2)
+		{"l1", func(c *qt.C, p page.Page) {
+			c.Assert(p.Title(), qt.Equals, "L1s")
+			c.Assert(len(p.Pages()), qt.Equals, 4) // 2 pages + 2 sections
+			c.Assert(p.Parent().IsHome(), qt.Equals, true)
+			c.Assert(len(p.Sections()), qt.Equals, 2)
 		}},
-		{"l1,l2", func(p *Page) {
-			assert.Equal("T2_-1", p.title)
-			assert.Len(p.Pages, 3)
-			assert.Equal(p, p.Pages[0].Parent())
-			assert.Equal("L1s", p.Parent().title)
-			assert.Equal("/l1/l2/", p.URLPath.URL)
-			assert.Equal("/l1/l2/", p.RelPermalink())
-			assert.Len(p.Sections(), 1)
+		{"l1,l2", func(c *qt.C, p page.Page) {
+			c.Assert(p.Title(), qt.Equals, "T2_-1")
+			c.Assert(len(p.Pages()), qt.Equals, 4) // 3 pages + 1 section
+			c.Assert(p.Pages()[0].Parent(), qt.Equals, p)
+			c.Assert(p.Parent().Title(), qt.Equals, "L1s")
+			c.Assert(p.RelPermalink(), qt.Equals, "/l1/l2/")
+			c.Assert(len(p.Sections()), qt.Equals, 1)
 
-			for _, child := range p.Pages {
-				assert.Equal(p, child.CurrentSection())
+			for _, child := range p.Pages() {
+				if child.IsSection() {
+					c.Assert(child.CurrentSection(), qt.Equals, child)
+					continue
+				}
+
+				c.Assert(child.CurrentSection(), qt.Equals, p)
 				active, err := child.InSection(p)
-				assert.NoError(err)
-				assert.True(active)
+				c.Assert(err, qt.IsNil)
+
+				c.Assert(active, qt.Equals, true)
 				active, err = p.InSection(child)
-				assert.NoError(err)
-				assert.True(active)
-				active, err = p.InSection(p.s.getPage(KindHome))
-				assert.NoError(err)
-				assert.False(active)
+				c.Assert(err, qt.IsNil)
+				c.Assert(active, qt.Equals, true)
+				active, err = p.InSection(getPage(p, "/"))
+				c.Assert(err, qt.IsNil)
+				c.Assert(active, qt.Equals, false)
 
 				isAncestor, err := p.IsAncestor(child)
-				assert.NoError(err)
-				assert.True(isAncestor)
+				c.Assert(err, qt.IsNil)
+				c.Assert(isAncestor, qt.Equals, true)
 				isAncestor, err = child.IsAncestor(p)
-				assert.NoError(err)
-				assert.False(isAncestor)
+				c.Assert(err, qt.IsNil)
+				c.Assert(isAncestor, qt.Equals, false)
 
 				isDescendant, err := p.IsDescendant(child)
-				assert.NoError(err)
-				assert.False(isDescendant)
+				c.Assert(err, qt.IsNil)
+				c.Assert(isDescendant, qt.Equals, false)
 				isDescendant, err = child.IsDescendant(p)
-				assert.NoError(err)
-				assert.True(isDescendant)
+				c.Assert(err, qt.IsNil)
+				c.Assert(isDescendant, qt.Equals, true)
 			}
 
-			assert.Equal(p, p.CurrentSection())
-
+			c.Assert(p.Eq(p.CurrentSection()), qt.Equals, true)
 		}},
-		{"l1,l2_2", func(p *Page) {
-			assert.Equal("T22_-1", p.title)
-			assert.Len(p.Pages, 2)
-			assert.Equal(filepath.FromSlash("l1/l2_2/page_2_2_1.md"), p.Pages[0].Path())
-			assert.Equal("L1s", p.Parent().title)
-			assert.Len(p.Sections(), 0)
+		{"l1,l2_2", func(c *qt.C, p page.Page) {
+			c.Assert(p.Title(), qt.Equals, "T22_-1")
+			c.Assert(len(p.Pages()), qt.Equals, 2)
+			c.Assert(p.Pages()[0].File().Path(), qt.Equals, filepath.FromSlash("l1/l2_2/page_2_2_1.md"))
+			c.Assert(p.Parent().Title(), qt.Equals, "L1s")
+			c.Assert(len(p.Sections()), qt.Equals, 0)
 		}},
-		{"l1,l2,l3", func(p *Page) {
-			var nilp *Page
+		{"l1,l2,l3", func(c *qt.C, p page.Page) {
+			nilp, _ := p.GetPage("this/does/not/exist")
 
-			assert.Equal("T3_-1", p.title)
-			assert.Len(p.Pages, 2)
-			assert.Equal("T2_-1", p.Parent().title)
-			assert.Len(p.Sections(), 0)
+			c.Assert(p.Title(), qt.Equals, "T3_-1")
+			c.Assert(len(p.Pages()), qt.Equals, 2)
+			c.Assert(p.Parent().Title(), qt.Equals, "T2_-1")
+			c.Assert(len(p.Sections()), qt.Equals, 0)
 
-			l1 := p.s.getPage(KindSection, "l1")
+			l1 := getPage(p, "/l1")
 			isDescendant, err := l1.IsDescendant(p)
-			assert.NoError(err)
-			assert.False(isDescendant)
+			c.Assert(err, qt.IsNil)
+			c.Assert(isDescendant, qt.Equals, false)
 			isDescendant, err = l1.IsDescendant(nil)
-			assert.NoError(err)
-			assert.False(isDescendant)
+			c.Assert(err, qt.IsNil)
+			c.Assert(isDescendant, qt.Equals, false)
 			isDescendant, err = nilp.IsDescendant(p)
-			assert.NoError(err)
-			assert.False(isDescendant)
+			c.Assert(err, qt.IsNil)
+			c.Assert(isDescendant, qt.Equals, false)
 			isDescendant, err = p.IsDescendant(l1)
-			assert.NoError(err)
-			assert.True(isDescendant)
+			c.Assert(err, qt.IsNil)
+			c.Assert(isDescendant, qt.Equals, true)
 
 			isAncestor, err := l1.IsAncestor(p)
-			assert.NoError(err)
-			assert.True(isAncestor)
+			c.Assert(err, qt.IsNil)
+			c.Assert(isAncestor, qt.Equals, true)
 			isAncestor, err = p.IsAncestor(l1)
-			assert.NoError(err)
-			assert.False(isAncestor)
-			assert.Equal(l1, p.FirstSection())
+			c.Assert(err, qt.IsNil)
+			c.Assert(isAncestor, qt.Equals, false)
+			c.Assert(p.FirstSection(), qt.Equals, l1)
 			isAncestor, err = p.IsAncestor(nil)
-			assert.NoError(err)
-			assert.False(isAncestor)
+			c.Assert(err, qt.IsNil)
+			c.Assert(isAncestor, qt.Equals, false)
 			isAncestor, err = nilp.IsAncestor(l1)
-			assert.NoError(err)
-			assert.False(isAncestor)
-
+			c.Assert(err, qt.IsNil)
+			c.Assert(isAncestor, qt.Equals, false)
 		}},
-		{"perm a,link", func(p *Page) {
-			assert.Equal("T9_-1", p.title)
-			assert.Equal("/perm-a/link/", p.RelPermalink())
-			assert.Len(p.Pages, 4)
-			first := p.Pages[0]
-			assert.Equal("/perm-a/link/t1_1/", first.RelPermalink())
+		{"perm a,link", func(c *qt.C, p page.Page) {
+			c.Assert(p.Title(), qt.Equals, "T9_-1")
+			c.Assert(p.RelPermalink(), qt.Equals, "/perm-a/link/")
+			c.Assert(len(p.Pages()), qt.Equals, 4)
+			first := p.Pages()[0]
+			c.Assert(first.RelPermalink(), qt.Equals, "/perm-a/link/t1_1/")
 			th.assertFileContent("public/perm-a/link/t1_1/index.html", "Single|T1_1")
 
-			last := p.Pages[3]
-			assert.Equal("/perm-a/link/t1_5/", last.RelPermalink())
-
+			last := p.Pages()[3]
+			c.Assert(last.RelPermalink(), qt.Equals, "/perm-a/link/t1_5/")
 		}},
 	}
 
-	home := s.getPage(KindHome)
+	home := s.getPage(page.KindHome)
 
 	for _, test := range tests {
-		sections := strings.Split(test.sections, ",")
-		p := s.getPage(KindSection, sections...)
-		assert.NotNil(p, fmt.Sprint(sections))
+		test := test
+		t.Run(fmt.Sprintf("sections %s", test.sections), func(t *testing.T) {
+			t.Parallel()
+			c := qt.New(t)
+			sections := strings.Split(test.sections, ",")
+			p := s.getPage(page.KindSection, sections...)
+			c.Assert(p, qt.Not(qt.IsNil), qt.Commentf(fmt.Sprint(sections)))
 
-		if p.Pages != nil {
-			assert.Equal(p.Pages, p.data["Pages"])
-		}
-		assert.NotNil(p.Parent(), fmt.Sprintf("Parent nil: %q", test.sections))
-		test.verify(p)
+			if p.Pages() != nil {
+				c.Assert(p.Data().(page.Data).Pages(), deepEqualsPages, p.Pages())
+			}
+			c.Assert(p.Parent(), qt.Not(qt.IsNil))
+			test.verify(c, p)
+		})
 	}
 
-	assert.NotNil(home)
+	c.Assert(home, qt.Not(qt.IsNil))
 
-	assert.Len(home.Sections(), 9)
-	assert.Equal(home.Sections(), s.Info.Sections())
+	c.Assert(len(home.Sections()), qt.Equals, 9)
+	c.Assert(s.Info.Sections(), deepEqualsPages, home.Sections())
 
-	rootPage := s.getPage(KindPage, "mypage.md")
-	assert.NotNil(rootPage)
-	assert.True(rootPage.Parent().IsHome())
+	rootPage := s.getPage(page.KindPage, "mypage.md")
+	c.Assert(rootPage, qt.Not(qt.IsNil))
+	c.Assert(rootPage.Parent().IsHome(), qt.Equals, true)
+	// https://github.com/gohugoio/hugo/issues/6365
+	c.Assert(rootPage.Sections(), qt.HasLen, 0)
 
 	// Add a odd test for this as this looks a little bit off, but I'm not in the mood
 	// to think too hard a out this right now. It works, but people will have to spell
@@ -317,10 +323,53 @@ PAG|{{ .Title }}|{{ $sect.InSection . }}
 	// If we later decide to do something about this, we will have to do some normalization in
 	// getPage.
 	// TODO(bep)
-	sectionWithSpace := s.getPage(KindSection, "Spaces in Section")
-	require.NotNil(t, sectionWithSpace)
-	require.Equal(t, "/spaces-in-section/", sectionWithSpace.RelPermalink())
+	sectionWithSpace := s.getPage(page.KindSection, "Spaces in Section")
+	c.Assert(sectionWithSpace, qt.Not(qt.IsNil))
+	c.Assert(sectionWithSpace.RelPermalink(), qt.Equals, "/spaces-in-section/")
 
 	th.assertFileContent("public/l1/l2/page/2/index.html", "L1/l2-IsActive: true", "PAG|T2_3|true")
+}
 
+func TestNextInSectionNested(t *testing.T) {
+	t.Parallel()
+
+	pageContent := `---
+title: "The Page"
+weight: %d
+---
+Some content.
+`
+	createPageContent := func(weight int) string {
+		return fmt.Sprintf(pageContent, weight)
+	}
+
+	b := newTestSitesBuilder(t)
+	b.WithSimpleConfigFile()
+	b.WithTemplates("_default/single.html", `
+Prev: {{ with .PrevInSection }}{{ .RelPermalink }}{{ end }}|
+Next: {{ with .NextInSection }}{{ .RelPermalink }}{{ end }}|
+`)
+
+	b.WithContent("blog/page1.md", createPageContent(1))
+	b.WithContent("blog/page2.md", createPageContent(2))
+	b.WithContent("blog/cool/_index.md", createPageContent(1))
+	b.WithContent("blog/cool/cool1.md", createPageContent(1))
+	b.WithContent("blog/cool/cool2.md", createPageContent(2))
+	b.WithContent("root1.md", createPageContent(1))
+	b.WithContent("root2.md", createPageContent(2))
+
+	b.Build(BuildCfg{})
+
+	b.AssertFileContent("public/root1/index.html",
+		"Prev: /root2/|", "Next: |")
+	b.AssertFileContent("public/root2/index.html",
+		"Prev: |", "Next: /root1/|")
+	b.AssertFileContent("public/blog/page1/index.html",
+		"Prev: /blog/page2/|", "Next: |")
+	b.AssertFileContent("public/blog/page2/index.html",
+		"Prev: |", "Next: /blog/page1/|")
+	b.AssertFileContent("public/blog/cool/cool1/index.html",
+		"Prev: /blog/cool/cool2/|", "Next: |")
+	b.AssertFileContent("public/blog/cool/cool2/index.html",
+		"Prev: |", "Next: /blog/cool/cool1/|")
 }

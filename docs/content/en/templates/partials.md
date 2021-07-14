@@ -60,6 +60,10 @@ All partials are called within your templates using the following pattern:
 One of the most common mistakes with new Hugo users is failing to pass a context to the partial call. In the pattern above, note how "the dot" (`.`) is required as the second argument to give the partial context. You can read more about "the dot" in the [Hugo templating introduction](/templates/introduction/).
 {{% /note %}}
 
+{{% note %}}
+`<PARTIAL>` including `baseof` is reserved. ([#5373](https://github.com/gohugoio/hugo/issues/5373))
+{{% /note %}}
+
 As shown in the above example directory structure, you can nest your directories within `partials` for better source organization. You only need to call the nested partial's path relative to the `partials` directory:
 
 ```
@@ -73,7 +77,62 @@ The second argument in a partial call is the variable being passed down. The abo
 
 This means the partial will *only* be able to access those variables. The partial is isolated and *has no access to the outer scope*. From within the partial, `$.Var` is equivalent to `.Var`.
 
-### Cached Partials
+## Returning a value from a Partial
+
+In addition to outputting markup, partials can be used to return a value of any type. In order to return a value, a partial must include a lone `return` statement.
+
+## Inline partials
+
+{{< new-in "0.74.0" >}}
+
+You can also define partials inline in the template. But remember that template namespace is global, so you need to make sure that the names are unique to avoid conflicts.
+
+```go-html-template
+Value: {{ partial "my-inline-partial" . }}
+
+{{ define "partials/my-inline-partial" }}
+{{ $value := 32 }}
+{{ return $value }}
+{{ end }}
+```
+
+### Example GetFeatured
+```go-html-template
+{{/* layouts/partials/GetFeatured.html */}}
+{{ return first . (where site.RegularPages "Params.featured" true) }}
+```
+
+```go-html-template
+{{/* layouts/index.html */}}
+{{ range partial "GetFeatured.html" 5 }}
+  [...]
+{{ end }}
+```
+### Example GetImage
+```go-html-template
+{{/* layouts/partials/GetImage.html */}}
+{{ $image := false }}
+{{ with .Params.gallery }}
+  {{ $image = index . 0 }}
+{{ end }}
+{{ with .Params.image }}
+  {{ $image = . }}
+{{ end }}
+{{ return $image }}
+```
+
+```go-html-template
+{{/* layouts/_default/single.html */}}
+{{ with partial "GetImage.html" . }}
+  [...]
+{{ end }}
+```
+
+{{% note %}}
+Only one `return` statement is allowed per partial file.
+{{% /note %}}
+
+## Cached Partials
 
 The [`partialCached` template function][partialcached] can offer significant performance gains for complex templates that don't need to be re-rendered on every invocation. The simplest usage is as follows:
 
@@ -99,7 +158,7 @@ Note that the variant parameters are not made available to the underlying partia
 
 ### Example `header.html`
 
-The following `header.html` partial template is used for [spf13.com](http://spf13.com/):
+The following `header.html` partial template is used for [spf13.com](https://spf13.com/):
 
 {{< code file="layouts/partials/header.html" download="header.html" >}}
 <!DOCTYPE html>
@@ -116,7 +175,6 @@ The following `header.html` partial template is used for [spf13.com](http://spf1
 
     {{ partial "head_includes.html" . }}
 </head>
-<body lang="en">
 {{< /code >}}
 
 {{% note %}}
@@ -125,35 +183,18 @@ The `header.html` example partial was built before the introduction of block tem
 
 ### Example `footer.html`
 
-The following `footer.html` partial template is used for [spf13.com](http://spf13.com/):
+The following `footer.html` partial template is used for [spf13.com](https://spf13.com/):
 
 {{< code file="layouts/partials/footer.html" download="footer.html" >}}
 <footer>
   <div>
     <p>
     &copy; 2013-14 Steve Francia.
-    <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons Attribution">Some rights reserved</a>;
-    please attribute properly and link back. Hosted by <a href="http://servergrove.com">ServerGrove</a>.
+    <a href="https://creativecommons.org/licenses/by/3.0/" title="Creative Commons Attribution">Some rights reserved</a>;
+    please attribute properly and link back.
     </p>
   </div>
 </footer>
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-XYSYXYSY-X']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script');
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
-        'http://www') + '.google-analytics.com/ga.js';
-    ga.setAttribute('async', 'true');
-    document.documentElement.firstChild.appendChild(ga);
-  })();
-
-</script>
-</body>
-</html>
 {{< /code >}}
 
 [context]: /templates/introduction/ "The most easily overlooked concept to understand about Go templating is how the dot always refers to the current context."

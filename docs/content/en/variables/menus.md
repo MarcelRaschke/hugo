@@ -64,9 +64,10 @@ a string representing HTML.
 
 .Weight
 : _int_ <br />
-Value of the `weight` key if set for the menu entry. If that key is not set,
-and if the menu entry is set in a page front-matter, this value defaults to the
-page's `.Weight`.
+Value of the `weight` key if set for the menu entry. By default the entries in 
+a menu are sorted ascending by their `weight`. If that key is not set, and if 
+the menu entry is set in a page front-matter, this value defaults to the page's 
+`.Weight`.
 
 .Parent
 : _string_ <br />
@@ -84,7 +85,7 @@ entries, if any, under the current menu entry.
 
 Menus also have the following functions available:
 
-[.HasChildren](/functions/haschildren/)
+.HasChildren
 : _boolean_ <br />
 Returns `true` if `.Children` is non-nil.
 

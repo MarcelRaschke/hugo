@@ -1,22 +1,25 @@
 package helpers
 
 import (
-	"github.com/spf13/viper"
+	"github.com/gohugoio/hugo/common/loggers"
+	"github.com/gohugoio/hugo/config"
+	"github.com/spf13/afero"
 
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/langs"
+	"github.com/gohugoio/hugo/modules"
 )
 
-func newTestPathSpec(fs *hugofs.Fs, v *viper.Viper) *PathSpec {
+func newTestPathSpec(fs *hugofs.Fs, v config.Provider) *PathSpec {
 	l := langs.NewDefaultLanguage(v)
-	ps, _ := NewPathSpec(fs, l)
+	ps, _ := NewPathSpec(fs, l, nil)
 	return ps
 }
 
 func newTestDefaultPathSpec(configKeyValues ...interface{}) *PathSpec {
-	v := viper.New()
+	v := config.New()
 	fs := hugofs.NewMem(v)
-	cfg := newTestCfgFor(fs)
+	cfg := newTestCfg()
 
 	for i := 0; i < len(configKeyValues); i += 2 {
 		cfg.Set(configKeyValues[i].(string), configKeyValues[i+1])
@@ -24,16 +27,8 @@ func newTestDefaultPathSpec(configKeyValues ...interface{}) *PathSpec {
 	return newTestPathSpec(fs, cfg)
 }
 
-func newTestCfgFor(fs *hugofs.Fs) *viper.Viper {
-	v := newTestCfg()
-	v.SetFs(fs.Source)
-
-	return v
-
-}
-
-func newTestCfg() *viper.Viper {
-	v := viper.New()
+func newTestCfg() config.Provider {
+	v := config.New()
 	v.Set("contentDir", "content")
 	v.Set("dataDir", "data")
 	v.Set("i18nDir", "i18n")
@@ -42,12 +37,20 @@ func newTestCfg() *viper.Viper {
 	v.Set("resourceDir", "resources")
 	v.Set("publishDir", "public")
 	v.Set("archetypeDir", "archetypes")
+	langs.LoadLanguageSettings(v, nil)
+	langs.LoadLanguageSettings(v, nil)
+	mod, err := modules.CreateProjectModule(v)
+	if err != nil {
+		panic(err)
+	}
+	v.Set("allModules", modules.Modules{mod})
+
 	return v
 }
 
 func newTestContentSpec() *ContentSpec {
-	v := viper.New()
-	spec, err := NewContentSpec(v)
+	v := config.New()
+	spec, err := NewContentSpec(v, loggers.NewErrorLogger(), afero.NewMemMapFs())
 	if err != nil {
 		panic(err)
 	}

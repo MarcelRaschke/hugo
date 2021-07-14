@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/helpers"
 
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestServer(t *testing.T) {
@@ -33,9 +33,10 @@ func TestServer(t *testing.T) {
 		// TODO(bep) not sure why server tests have started to fail on the Windows CI server.
 		t.Skip("Skip server test on appveyor")
 	}
-	assert := require.New(t)
-	dir, err := createSimpleTestSite(t)
-	assert.NoError(err)
+	c := qt.New(t)
+	dir, clean, err := createSimpleTestSite(t, testSiteConfig{})
+	defer clean()
+	c.Assert(err, qt.IsNil)
 
 	// Let us hope that this port is available on all systems ...
 	port := 1331
@@ -54,7 +55,7 @@ func TestServer(t *testing.T) {
 
 	go func() {
 		_, err = cmd.ExecuteC()
-		assert.NoError(err)
+		c.Assert(err, qt.IsNil)
 	}()
 
 	// There is no way to know exactly when the server is ready for connections.
@@ -63,15 +64,15 @@ func TestServer(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	resp, err := http.Get("http://localhost:1331/")
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 	defer resp.Body.Close()
 	homeContent := helpers.ReaderToString(resp.Body)
 
-	assert.Contains(homeContent, "List: Hugo Commands")
+	c.Assert(homeContent, qt.Contains, "List: Hugo Commands")
+	c.Assert(homeContent, qt.Contains, "Environment: development")
 
 	// Stop the server.
 	stop <- true
-
 }
 
 func TestFixURL(t *testing.T) {
@@ -96,34 +97,35 @@ func TestFixURL(t *testing.T) {
 		{"No config", "", "", true, 1313, "//localhost:1313/"},
 	}
 
-	for i, test := range tests {
-		b := newCommandsBuilder()
-		s := b.newServerCmd()
-		v := viper.New()
-		baseURL := test.CLIBaseURL
-		v.Set("baseURL", test.CfgBaseURL)
-		s.serverAppend = test.AppendPort
-		s.serverPort = test.Port
-		result, err := s.fixURL(v, baseURL, s.serverPort)
-		if err != nil {
-			t.Errorf("Test #%d %s: unexpected error %s", i, test.TestName, err)
-		}
-		if result != test.Result {
-			t.Errorf("Test #%d %s: expected %q, got %q", i, test.TestName, test.Result, result)
-		}
+	for _, test := range tests {
+		t.Run(test.TestName, func(t *testing.T) {
+			b := newCommandsBuilder()
+			s := b.newServerCmd()
+			v := config.New()
+			baseURL := test.CLIBaseURL
+			v.Set("baseURL", test.CfgBaseURL)
+			s.serverAppend = test.AppendPort
+			s.serverPort = test.Port
+			result, err := s.fixURL(v, baseURL, s.serverPort)
+			if err != nil {
+				t.Errorf("Unexpected error %s", err)
+			}
+			if result != test.Result {
+				t.Errorf("Expected %q, got %q", test.Result, result)
+			}
+		})
 	}
 }
 
 func TestRemoveErrorPrefixFromLog(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	content := `ERROR 2018/10/07 13:11:12 Error while rendering "home": template: _default/baseof.html:4:3: executing "main" at <partial "logo" .>: error calling partial: template: partials/logo.html:5:84: executing "partials/logo.html" at <$resized.AHeight>: can't evaluate field AHeight in type *resource.Image
 ERROR 2018/10/07 13:11:12 Rebuild failed: logged 1 error(s)
 `
 
 	withoutError := removeErrorPrefixFromLog(content)
 
-	assert.False(strings.Contains(withoutError, "ERROR"), withoutError)
-
+	c.Assert(strings.Contains(withoutError, "ERROR"), qt.Equals, false)
 }
 
 func isWindowsCI() bool {

@@ -1,4 +1,4 @@
-// Copyright 2016 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,15 +24,20 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+
+	"github.com/gohugoio/hugo/parser/pageparser"
+
+	"github.com/gohugoio/hugo/common/hugio"
 
 	"github.com/gohugoio/hugo/parser/metadecoders"
 
+	"github.com/gohugoio/hugo/common/maps"
 	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/gohugoio/hugo/parser"
 	"github.com/spf13/afero"
-	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -70,11 +74,9 @@ Import from Jekyll requires two paths, e.g. ` + "`hugo import jekyll jekyll_root
 	cc.cmd.AddCommand(importJekyllCmd)
 
 	return cc
-
 }
 
 func (i *importCmd) importFromJekyll(cmd *cobra.Command, args []string) error {
-
 	if len(args) < 2 {
 		return newUserError(`import from jekyll requires two paths, e.g. ` + "`hugo import jekyll jekyll_root_path target_path`.")
 	}
@@ -103,7 +105,7 @@ func (i *importCmd) importFromJekyll(cmd *cobra.Command, args []string) error {
 		return errors.New("abort: jekyll root contains neither posts nor drafts")
 	}
 
-	site, err := i.createSiteFromJekyll(jekyllRoot, targetDir, jekyllPostDirs, forceImport)
+	err = i.createSiteFromJekyll(jekyllRoot, targetDir, jekyllPostDirs, forceImport)
 
 	if err != nil {
 		return newUserError(err)
@@ -112,7 +114,7 @@ func (i *importCmd) importFromJekyll(cmd *cobra.Command, args []string) error {
 	jww.FEEDBACK.Println("Importing...")
 
 	fileCount := 0
-	callback := func(path string, fi os.FileInfo, err error) error {
+	callback := func(path string, fi hugofs.FileMetaInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -140,7 +142,7 @@ func (i *importCmd) importFromJekyll(cmd *cobra.Command, args []string) error {
 		}
 
 		fileCount++
-		return convertJekyllPost(site, path, relPath, targetDir, draft)
+		return convertJekyllPost(path, relPath, targetDir, draft)
 	}
 
 	for jekyllPostDir, hasAnyPostInDir := range jekyllPostDirs {
@@ -198,22 +200,22 @@ func (i *importCmd) retrieveJekyllPostDir(fs afero.Fs, dir string) (bool, bool) 
 	return false, true
 }
 
-func (i *importCmd) createSiteFromJekyll(jekyllRoot, targetDir string, jekyllPostDirs map[string]bool, force bool) (*hugolib.Site, error) {
+func (i *importCmd) createSiteFromJekyll(jekyllRoot, targetDir string, jekyllPostDirs map[string]bool, force bool) error {
 	s, err := hugolib.NewSiteDefaultLang()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fs := s.Fs.Source
 	if exists, _ := helpers.Exists(targetDir, fs); exists {
 		if isDir, _ := helpers.IsDir(targetDir, fs); !isDir {
-			return nil, errors.New("target path \"" + targetDir + "\" exists but is not a directory")
+			return errors.New("target path \"" + targetDir + "\" exists but is not a directory")
 		}
 
 		isEmpty, _ := helpers.IsEmpty(targetDir, fs)
 
 		if !isEmpty && !force {
-			return nil, errors.New("target path \"" + targetDir + "\" exists and is not empty")
+			return errors.New("target path \"" + targetDir + "\" exists and is not empty")
 		}
 	}
 
@@ -230,7 +232,7 @@ func (i *importCmd) createSiteFromJekyll(jekyllRoot, targetDir string, jekyllPos
 
 	i.copyJekyllFilesAndFolders(jekyllRoot, filepath.Join(targetDir, "static"), jekyllPostDirs)
 
-	return s, nil
+	return nil
 }
 
 func (i *importCmd) loadJekyllConfig(fs afero.Fs, jekyllRoot string) map[string]interface{} {
@@ -251,13 +253,11 @@ func (i *importCmd) loadJekyllConfig(fs afero.Fs, jekyllRoot string) map[string]
 	defer f.Close()
 
 	b, err := ioutil.ReadAll(f)
-
 	if err != nil {
 		return nil
 	}
 
-	c, err := metadecoders.UnmarshalToMap(b, metadecoders.YAML)
-
+	c, err := metadecoders.Default.UnmarshalToMap(b, metadecoders.YAML)
 	if err != nil {
 		return nil
 	}
@@ -301,66 +301,10 @@ func (i *importCmd) createConfigFromJekyll(fs afero.Fs, inpath string, kind meta
 	return helpers.WriteToDisk(filepath.Join(inpath, "config."+string(kind)), &buf, fs)
 }
 
-func copyFile(source string, dest string) error {
-	sf, err := os.Open(source)
-	if err != nil {
-		return err
-	}
-	defer sf.Close()
-	df, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer df.Close()
-	_, err = io.Copy(df, sf)
-	if err == nil {
-		si, err := os.Stat(source)
-		if err != nil {
-			err = os.Chmod(dest, si.Mode())
-
-			if err != nil {
-				return err
-			}
-		}
-
-	}
-	return nil
-}
-
-func copyDir(source string, dest string) error {
-	fi, err := os.Stat(source)
-	if err != nil {
-		return err
-	}
-	if !fi.IsDir() {
-		return errors.New(source + " is not a directory")
-	}
-	err = os.MkdirAll(dest, fi.Mode())
-	if err != nil {
-		return err
-	}
-	entries, err := ioutil.ReadDir(source)
-	for _, entry := range entries {
-		sfp := filepath.Join(source, entry.Name())
-		dfp := filepath.Join(dest, entry.Name())
-		if entry.IsDir() {
-			err = copyDir(sfp, dfp)
-			if err != nil {
-				jww.ERROR.Println(err)
-			}
-		} else {
-			err = copyFile(sfp, dfp)
-			if err != nil {
-				jww.ERROR.Println(err)
-			}
-		}
-
-	}
-	return nil
-}
-
 func (i *importCmd) copyJekyllFilesAndFolders(jekyllRoot, dest string, jekyllPostDirs map[string]bool) (err error) {
-	fi, err := os.Stat(jekyllRoot)
+	fs := hugofs.Os
+
+	fi, err := fs.Stat(jekyllRoot)
 	if err != nil {
 		return err
 	}
@@ -372,13 +316,17 @@ func (i *importCmd) copyJekyllFilesAndFolders(jekyllRoot, dest string, jekyllPos
 		return err
 	}
 	entries, err := ioutil.ReadDir(jekyllRoot)
+	if err != nil {
+		return err
+	}
+
 	for _, entry := range entries {
 		sfp := filepath.Join(jekyllRoot, entry.Name())
 		dfp := filepath.Join(dest, entry.Name())
 		if entry.IsDir() {
 			if entry.Name()[0] != '_' && entry.Name()[0] != '.' {
 				if _, ok := jekyllPostDirs[entry.Name()]; !ok {
-					err = copyDir(sfp, dfp)
+					err = hugio.CopyDir(fs, sfp, dfp, nil)
 					if err != nil {
 						jww.ERROR.Println(err)
 					}
@@ -386,8 +334,10 @@ func (i *importCmd) copyJekyllFilesAndFolders(jekyllRoot, dest string, jekyllPos
 			}
 		} else {
 			lowerEntryName := strings.ToLower(entry.Name())
-			exceptSuffix := []string{".md", ".markdown", ".html", ".htm",
-				".xml", ".textile", "rakefile", "gemfile", ".lock"}
+			exceptSuffix := []string{
+				".md", ".markdown", ".html", ".htm",
+				".xml", ".textile", "rakefile", "gemfile", ".lock",
+			}
 			isExcept := false
 			for _, suffix := range exceptSuffix {
 				if strings.HasSuffix(lowerEntryName, suffix) {
@@ -397,7 +347,7 @@ func (i *importCmd) copyJekyllFilesAndFolders(jekyllRoot, dest string, jekyllPos
 			}
 
 			if !isExcept && entry.Name()[0] != '.' && entry.Name()[0] != '_' {
-				err = copyFile(sfp, dfp)
+				err = hugio.CopyFile(fs, sfp, dfp)
 				if err != nil {
 					jww.ERROR.Println(err)
 				}
@@ -425,7 +375,7 @@ func parseJekyllFilename(filename string) (time.Time, string, error) {
 	return postDate, postName, nil
 }
 
-func convertJekyllPost(s *hugolib.Site, path, relPath, targetDir string, draft bool) error {
+func convertJekyllPost(path, relPath, targetDir string, draft bool) error {
 	jww.TRACE.Println("Converting", path)
 
 	filename := filepath.Base(path)
@@ -447,30 +397,34 @@ func convertJekyllPost(s *hugolib.Site, path, relPath, targetDir string, draft b
 		return err
 	}
 
-	pf, err := parseContentFile(bytes.NewReader(contentBytes))
+	pf, err := pageparser.ParseFrontMatterAndContent(bytes.NewReader(contentBytes))
 	if err != nil {
 		jww.ERROR.Println("Parse file error:", path)
 		return err
 	}
 
-	newmetadata, err := convertJekyllMetaData(pf.frontMatter, postName, postDate, draft)
+	newmetadata, err := convertJekyllMetaData(pf.FrontMatter, postName, postDate, draft)
 	if err != nil {
 		jww.ERROR.Println("Convert metadata error:", path)
 		return err
 	}
 
-	content := convertJekyllContent(newmetadata, string(pf.content))
+	content, err := convertJekyllContent(newmetadata, string(pf.Content))
+	if err != nil {
+		jww.ERROR.Println("Converting Jekyll error:", path)
+		return err
+	}
 
 	fs := hugofs.Os
 	if err := helpers.WriteToDisk(targetFile, strings.NewReader(content), fs); err != nil {
-		return fmt.Errorf("Failed to save file %q:", filename)
+		return fmt.Errorf("failed to save file %q: %s", filename, err)
 	}
 
 	return nil
 }
 
 func convertJekyllMetaData(m interface{}, postName string, postDate time.Time, draft bool) (interface{}, error) {
-	metadata, err := cast.ToStringMapE(m)
+	metadata, err := maps.ToStringMapE(m)
 	if err != nil {
 		return nil, err
 	}
@@ -521,8 +475,8 @@ func convertJekyllMetaData(m interface{}, postName string, postDate time.Time, d
 	return metadata, nil
 }
 
-func convertJekyllContent(m interface{}, content string) string {
-	metadata, _ := cast.ToStringMapE(m)
+func convertJekyllContent(m interface{}, content string) (string, error) {
+	metadata, _ := maps.ToStringMapE(m)
 
 	lines := strings.Split(content, "\n")
 	var resultLines []string
@@ -545,7 +499,6 @@ func convertJekyllContent(m interface{}, content string) string {
 	}{
 		{regexp.MustCompile("(?i)<!-- more -->"), "<!--more-->"},
 		{regexp.MustCompile(`\{%\s*raw\s*%\}\s*(.*?)\s*\{%\s*endraw\s*%\}`), "$1"},
-		{regexp.MustCompile(`{%\s*highlight\s*(.*?)\s*%}`), "{{< highlight $1 >}}"},
 		{regexp.MustCompile(`{%\s*endhighlight\s*%}`), "{{< / highlight >}}"},
 	}
 
@@ -559,13 +512,67 @@ func convertJekyllContent(m interface{}, content string) string {
 	}{
 		// Octopress image tag: http://octopress.org/docs/plugins/image-tag/
 		{regexp.MustCompile(`{%\s+img\s*(.*?)\s*%}`), replaceImageTag},
+		{regexp.MustCompile(`{%\s*highlight\s*(.*?)\s*%}`), replaceHighlightTag},
 	}
 
 	for _, replace := range replaceListFunc {
 		content = replace.re.ReplaceAllStringFunc(content, replace.replace)
 	}
 
-	return content
+	var buf bytes.Buffer
+	if len(metadata) != 0 {
+		err := parser.InterfaceToFrontMatter(m, metadecoders.YAML, &buf)
+		if err != nil {
+			return "", err
+		}
+	}
+	buf.WriteString(content)
+
+	return buf.String(), nil
+}
+
+func replaceHighlightTag(match string) string {
+	r := regexp.MustCompile(`{%\s*highlight\s*(.*?)\s*%}`)
+	parts := r.FindStringSubmatch(match)
+	lastQuote := rune(0)
+	f := func(c rune) bool {
+		switch {
+		case c == lastQuote:
+			lastQuote = rune(0)
+			return false
+		case lastQuote != rune(0):
+			return false
+		case unicode.In(c, unicode.Quotation_Mark):
+			lastQuote = c
+			return false
+		default:
+			return unicode.IsSpace(c)
+		}
+	}
+	// splitting string by space but considering quoted section
+	items := strings.FieldsFunc(parts[1], f)
+
+	result := bytes.NewBufferString("{{< highlight ")
+	result.WriteString(items[0]) // language
+	options := items[1:]
+	for i, opt := range options {
+		opt = strings.Replace(opt, "\"", "", -1)
+		if opt == "linenos" {
+			opt = "linenos=table"
+		}
+		if i == 0 {
+			opt = " \"" + opt
+		}
+		if i < len(options)-1 {
+			opt += ","
+		} else if i == len(options)-1 {
+			opt += "\""
+		}
+		result.WriteString(opt)
+	}
+
+	result.WriteString(" >}}")
+	return result.String()
 }
 
 func replaceImageTag(match string) string {
@@ -593,8 +600,8 @@ func replaceImageTag(match string) string {
 	}
 	result.WriteString(">}}")
 	return result.String()
-
 }
+
 func replaceOptionalPart(buffer *bytes.Buffer, partName string, part string) {
 	if len(part) > 0 {
 		buffer.WriteString(partName + "=\"" + part + "\" ")

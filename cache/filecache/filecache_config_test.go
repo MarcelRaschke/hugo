@@ -20,19 +20,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gohugoio/hugo/helpers"
+	"github.com/spf13/afero"
 
 	"github.com/gohugoio/hugo/config"
-	"github.com/gohugoio/hugo/hugofs"
 
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
+	qt "github.com/frankban/quicktest"
 )
 
 func TestDecodeConfig(t *testing.T) {
 	t.Parallel()
 
-	assert := require.New(t)
+	c := qt.New(t)
 
 	configStr := `
 resourceDir = "myresources"
@@ -56,30 +54,26 @@ dir = "/path/to/c3"
 `
 
 	cfg, err := config.FromConfigString(configStr, "toml")
-	assert.NoError(err)
-	fs := hugofs.NewMem(cfg)
-	p, err := helpers.NewPathSpec(fs, cfg)
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
+	fs := afero.NewMemMapFs()
+	decoded, err := DecodeConfig(fs, cfg)
+	c.Assert(err, qt.IsNil)
 
-	decoded, err := decodeConfig(p)
-	assert.NoError(err)
-
-	assert.Equal(4, len(decoded))
+	c.Assert(len(decoded), qt.Equals, 5)
 
 	c2 := decoded["getcsv"]
-	assert.Equal("11h0m0s", c2.MaxAge.String())
-	assert.Equal(filepath.FromSlash("/path/to/c2"), c2.Dir)
+	c.Assert(c2.MaxAge.String(), qt.Equals, "11h0m0s")
+	c.Assert(c2.Dir, qt.Equals, filepath.FromSlash("/path/to/c2/filecache/getcsv"))
 
 	c3 := decoded["images"]
-	assert.Equal(time.Duration(-1), c3.MaxAge)
-	assert.Equal(filepath.FromSlash("/path/to/c3"), c3.Dir)
-
+	c.Assert(c3.MaxAge, qt.Equals, time.Duration(-1))
+	c.Assert(c3.Dir, qt.Equals, filepath.FromSlash("/path/to/c3/filecache/images"))
 }
 
 func TestDecodeConfigIgnoreCache(t *testing.T) {
 	t.Parallel()
 
-	assert := require.New(t)
+	c := qt.New(t)
 
 	configStr := `
 resourceDir = "myresources"
@@ -104,24 +98,20 @@ dir = "/path/to/c3"
 `
 
 	cfg, err := config.FromConfigString(configStr, "toml")
-	assert.NoError(err)
-	fs := hugofs.NewMem(cfg)
-	p, err := helpers.NewPathSpec(fs, cfg)
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
+	fs := afero.NewMemMapFs()
+	decoded, err := DecodeConfig(fs, cfg)
+	c.Assert(err, qt.IsNil)
 
-	decoded, err := decodeConfig(p)
-	assert.NoError(err)
-
-	assert.Equal(4, len(decoded))
+	c.Assert(len(decoded), qt.Equals, 5)
 
 	for _, v := range decoded {
-		assert.Equal(time.Duration(0), v.MaxAge)
+		c.Assert(v.MaxAge, qt.Equals, time.Duration(0))
 	}
-
 }
 
 func TestDecodeConfigDefault(t *testing.T) {
-	assert := require.New(t)
+	c := qt.New(t)
 	cfg := newTestConfig()
 
 	if runtime.GOOS == "windows" {
@@ -133,34 +123,32 @@ func TestDecodeConfigDefault(t *testing.T) {
 		cfg.Set("cacheDir", "/cache/thecache")
 	}
 
-	fs := hugofs.NewMem(cfg)
-	p, err := helpers.NewPathSpec(fs, cfg)
-	assert.NoError(err)
+	fs := afero.NewMemMapFs()
 
-	decoded, err := decodeConfig(p)
+	decoded, err := DecodeConfig(fs, cfg)
 
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
-	assert.Equal(4, len(decoded))
+	c.Assert(len(decoded), qt.Equals, 5)
 
 	imgConfig := decoded[cacheKeyImages]
 	jsonConfig := decoded[cacheKeyGetJSON]
 
 	if runtime.GOOS == "windows" {
-		assert.Equal("_gen", imgConfig.Dir)
+		c.Assert(imgConfig.Dir, qt.Equals, filepath.FromSlash("_gen/images"))
 	} else {
-		assert.Equal("_gen", imgConfig.Dir)
-		assert.Equal("/cache/thecache/hugoproject", jsonConfig.Dir)
+		c.Assert(imgConfig.Dir, qt.Equals, "_gen/images")
+		c.Assert(jsonConfig.Dir, qt.Equals, "/cache/thecache/hugoproject/filecache/getjson")
 	}
 
-	assert.True(imgConfig.isResourceDir)
-	assert.False(jsonConfig.isResourceDir)
+	c.Assert(imgConfig.isResourceDir, qt.Equals, true)
+	c.Assert(jsonConfig.isResourceDir, qt.Equals, false)
 }
 
 func TestDecodeConfigInvalidDir(t *testing.T) {
 	t.Parallel()
 
-	assert := require.New(t)
+	c := qt.New(t)
 
 	configStr := `
 resourceDir = "myresources"
@@ -182,18 +170,15 @@ dir = "/"
 	}
 
 	cfg, err := config.FromConfigString(configStr, "toml")
-	assert.NoError(err)
-	fs := hugofs.NewMem(cfg)
-	p, err := helpers.NewPathSpec(fs, cfg)
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
+	fs := afero.NewMemMapFs()
 
-	_, err = decodeConfig(p)
-	assert.Error(err)
-
+	_, err = DecodeConfig(fs, cfg)
+	c.Assert(err, qt.Not(qt.IsNil))
 }
 
-func newTestConfig() *viper.Viper {
-	cfg := viper.New()
+func newTestConfig() config.Provider {
+	cfg := config.New()
 	cfg.Set("workingDir", filepath.FromSlash("/my/cool/hugoproject"))
 	cfg.Set("contentDir", "content")
 	cfg.Set("dataDir", "data")

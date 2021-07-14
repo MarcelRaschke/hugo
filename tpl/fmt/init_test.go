@@ -16,24 +16,27 @@ package fmt
 import (
 	"testing"
 
+	"github.com/gohugoio/hugo/htesting/hqt"
+
+	qt "github.com/frankban/quicktest"
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/deps"
 	"github.com/gohugoio/hugo/tpl/internal"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInit(t *testing.T) {
+	c := qt.New(t)
 	var found bool
 	var ns *internal.TemplateFuncsNamespace
 
 	for _, nsf := range internal.TemplateFuncsNamespaceRegistry {
-		ns = nsf(&deps.Deps{Log: loggers.NewErrorLogger()})
+		ns = nsf(&deps.Deps{Log: loggers.NewIgnorableLogger(loggers.NewErrorLogger())})
 		if ns.Name == name {
 			found = true
 			break
 		}
 	}
 
-	require.True(t, found)
-	require.IsType(t, &Namespace{}, ns.Context())
+	c.Assert(found, qt.Equals, true)
+	c.Assert(ns.Context(), hqt.IsSameType, &Namespace{})
 }

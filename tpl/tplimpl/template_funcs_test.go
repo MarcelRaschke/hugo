@@ -1,4 +1,4 @@
-// Copyright 2016 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,27 +21,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gohugoio/hugo/modules"
+
+	"github.com/gohugoio/hugo/resources/page"
+
+	qt "github.com/frankban/quicktest"
+	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/deps"
-	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
-	"github.com/gohugoio/hugo/i18n"
 	"github.com/gohugoio/hugo/langs"
+	"github.com/gohugoio/hugo/langs/i18n"
 	"github.com/gohugoio/hugo/tpl"
 	"github.com/gohugoio/hugo/tpl/internal"
 	"github.com/gohugoio/hugo/tpl/partials"
 	"github.com/spf13/afero"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
+	
 )
 
-var (
-	logger = loggers.NewErrorLogger()
-)
+var logger = loggers.NewErrorLogger()
 
 func newTestConfig() config.Provider {
-	v := viper.New()
+	v := config.New()
 	v.Set("contentDir", "content")
 	v.Set("dataDir", "data")
 	v.Set("i18nDir", "i18n")
@@ -50,6 +52,14 @@ func newTestConfig() config.Provider {
 	v.Set("assetDir", "assets")
 	v.Set("resourceDir", "resources")
 	v.Set("publishDir", "public")
+
+	langs.LoadLanguageSettings(v, nil)
+	mod, err := modules.CreateProjectModule(v)
+	if err != nil {
+		panic(err)
+	}
+	v.Set("allModules", modules.Modules{mod})
+
 	return v
 }
 
@@ -57,6 +67,7 @@ func newDepsConfig(cfg config.Provider) deps.DepsCfg {
 	l := langs.NewLanguage("en", cfg)
 	return deps.DepsCfg{
 		Language:            l,
+		Site:                page.NewDummyHugoSite(cfg),
 		Cfg:                 cfg,
 		Fs:                  hugofs.NewMem(l),
 		Logger:              logger,
@@ -67,6 +78,7 @@ func newDepsConfig(cfg config.Provider) deps.DepsCfg {
 
 func TestTemplateFuncsExamples(t *testing.T) {
 	t.Parallel()
+	c := qt.New(t)
 
 	workingDir := "/home/hugo"
 
@@ -86,7 +98,8 @@ func TestTemplateFuncsExamples(t *testing.T) {
 	depsCfg := newDepsConfig(v)
 	depsCfg.Fs = fs
 	d, err := deps.New(depsCfg)
-	require.NoError(t, err)
+	defer d.Close()
+	c.Assert(err, qt.IsNil)
 
 	var data struct {
 		Title   string
@@ -98,23 +111,23 @@ func TestTemplateFuncsExamples(t *testing.T) {
 	data.Title = "**BatMan**"
 	data.Section = "blog"
 	data.Params = map[string]interface{}{"langCode": "en"}
-	data.Hugo = map[string]interface{}{"Version": helpers.MustParseHugoVersion("0.36.1").Version()}
+	data.Hugo = map[string]interface{}{"Version": hugo.MustParseVersion("0.36.1").Version()}
 
 	for _, nsf := range internal.TemplateFuncsNamespaceRegistry {
 		ns := nsf(d)
 		for _, mm := range ns.MethodMappings {
 			for i, example := range mm.Examples {
 				in, expected := example[0], example[1]
-				d.WithTemplate = func(templ tpl.TemplateHandler) error {
-					require.NoError(t, templ.AddTemplate("test", in))
-					require.NoError(t, templ.AddTemplate("partials/header.html", "<title>Hugo Rocks!</title>"))
+				d.WithTemplate = func(templ tpl.TemplateManager) error {
+					c.Assert(templ.AddTemplate("test", in), qt.IsNil)
+					c.Assert(templ.AddTemplate("partials/header.html", "<title>Hugo Rocks!</title>"), qt.IsNil)
 					return nil
 				}
-				require.NoError(t, d.LoadResources())
+				c.Assert(d.LoadResources(), qt.IsNil)
 
 				var b bytes.Buffer
-				templ, _ := d.Tmpl.Lookup("test")
-				require.NoError(t, templ.Execute(&b, &data))
+				templ, _ := d.Tmpl().Lookup("test")
+				c.Assert(d.Tmpl().Execute(templ, &b, &data), qt.IsNil)
 				if b.String() != expected {
 					t.Fatalf("%s[%d]: got %q expected %q", ns.Name, i, b.String(), expected)
 				}
@@ -128,7 +141,7 @@ func TestTemplateFuncsExamples(t *testing.T) {
 func TestPartialCached(t *testing.T) {
 	t.Parallel()
 
-	assert := require.New(t)
+	c := qt.New(t)
 
 	partial := `Now: {{ now.UnixNano }}`
 	name := "testing"
@@ -140,7 +153,7 @@ func TestPartialCached(t *testing.T) {
 
 	config := newDepsConfig(v)
 
-	config.WithTemplate = func(templ tpl.TemplateHandler) error {
+	config.WithTemplate = func(templ tpl.TemplateManager) error {
 		err := templ.AddTemplate("partials/"+name, partial)
 		if err != nil {
 			return err
@@ -150,31 +163,31 @@ func TestPartialCached(t *testing.T) {
 	}
 
 	de, err := deps.New(config)
-	assert.NoError(err)
-	assert.NoError(de.LoadResources())
+	c.Assert(err, qt.IsNil)
+	defer de.Close()
+	c.Assert(de.LoadResources(), qt.IsNil)
 
 	ns := partials.New(de)
 
 	res1, err := ns.IncludeCached(name, &data)
-	assert.NoError(err)
+	c.Assert(err, qt.IsNil)
 
 	for j := 0; j < 10; j++ {
 		time.Sleep(2 * time.Nanosecond)
 		res2, err := ns.IncludeCached(name, &data)
-		assert.NoError(err)
+		c.Assert(err, qt.IsNil)
 
 		if !reflect.DeepEqual(res1, res2) {
 			t.Fatalf("cache mismatch")
 		}
 
 		res3, err := ns.IncludeCached(name, &data, fmt.Sprintf("variant%d", j))
-		assert.NoError(err)
+		c.Assert(err, qt.IsNil)
 
 		if reflect.DeepEqual(res1, res3) {
 			t.Fatalf("cache mismatch")
 		}
 	}
-
 }
 
 func BenchmarkPartial(b *testing.B) {
@@ -192,8 +205,9 @@ func BenchmarkPartialCached(b *testing.B) {
 }
 
 func doBenchmarkPartial(b *testing.B, f func(ns *partials.Namespace) error) {
-	config := newDepsConfig(viper.New())
-	config.WithTemplate = func(templ tpl.TemplateHandler) error {
+	c := qt.New(b)
+	config := newDepsConfig(config.New())
+	config.WithTemplate = func(templ tpl.TemplateManager) error {
 		err := templ.AddTemplate("partials/bench1", `{{ shuffle (seq 1 10) }}`)
 		if err != nil {
 			return err
@@ -203,8 +217,9 @@ func doBenchmarkPartial(b *testing.B, f func(ns *partials.Namespace) error) {
 	}
 
 	de, err := deps.New(config)
-	require.NoError(b, err)
-	require.NoError(b, de.LoadResources())
+	c.Assert(err, qt.IsNil)
+	defer de.Close()
+	c.Assert(de.LoadResources(), qt.IsNil)
 
 	ns := partials.New(de)
 
@@ -216,22 +231,4 @@ func doBenchmarkPartial(b *testing.B, f func(ns *partials.Namespace) error) {
 			}
 		}
 	})
-}
-
-func newTestFuncster() *templateFuncster {
-	return newTestFuncsterWithViper(viper.New())
-}
-
-func newTestFuncsterWithViper(v *viper.Viper) *templateFuncster {
-	config := newDepsConfig(v)
-	d, err := deps.New(config)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := d.LoadResources(); err != nil {
-		panic(err)
-	}
-
-	return d.Tmpl.(*templateHandler).html.funcster
 }

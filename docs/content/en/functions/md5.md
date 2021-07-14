@@ -14,12 +14,10 @@ keywords: []
 signature: ["md5 INPUT"]
 workson: []
 hugoversion:
-relatedfuncs: []
+relatedfuncs: [sha]
 deprecated: false
 aliases: []
 ---
-
-
 
 ```
 {{ md5 "Hello world, gophers!" }}

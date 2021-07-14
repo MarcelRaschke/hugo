@@ -1,4 +1,4 @@
-// Copyright 2016 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,14 +16,17 @@ package create
 
 import (
 	"bytes"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/gohugoio/hugo/common/paths"
 
 	"github.com/pkg/errors"
 
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
+	"github.com/gohugoio/hugo/common/hexec"
+	"github.com/gohugoio/hugo/hugofs/files"
 
 	"github.com/gohugoio/hugo/hugofs"
 
@@ -38,7 +41,7 @@ import (
 func NewContent(
 	sites *hugolib.HugoSites, kind, targetPath string) error {
 	targetPath = filepath.Clean(targetPath)
-	ext := helpers.Ext(targetPath)
+	ext := paths.Ext(targetPath)
 	ps := sites.PathSpec
 	archetypeFs := ps.BaseFs.SourceFilesystems.Archetypes.Fs
 	sourceFs := ps.Fs.Source
@@ -50,7 +53,10 @@ func NewContent(
 
 	if isDir {
 
-		langFs := hugofs.NewLanguageFs(s.Language.Lang, sites.LanguageSet(), archetypeFs)
+		langFs, err := hugofs.NewLanguageFs(sites.LanguageSet(), archetypeFs)
+		if err != nil {
+			return err
+		}
 
 		cm, err := mapArcheTypeDir(ps, langFs, archetypeFilename)
 		if err != nil {
@@ -64,7 +70,7 @@ func NewContent(
 		}
 
 		name := filepath.Base(targetPath)
-		return newContentFromDir(archetypeFilename, sites, archetypeFs, sourceFs, cm, name, contentPath)
+		return newContentFromDir(archetypeFilename, sites, sourceFs, cm, name, contentPath)
 	}
 
 	// Building the sites can be expensive, so only do it if really needed.
@@ -100,7 +106,11 @@ func NewContent(
 	if editor != "" {
 		jww.FEEDBACK.Printf("Editing %s with %q ...\n", targetPath, editor)
 
-		cmd := exec.Command(editor, contentPath)
+		editorCmd := append(strings.Fields(editor), contentPath)
+		cmd, err := hexec.SafeCommand(editorCmd[0], editorCmd[1:]...)
+		if err != nil {
+			return err
+		}
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -111,9 +121,9 @@ func NewContent(
 	return nil
 }
 
-func targetSite(sites *hugolib.HugoSites, fi *hugofs.LanguageFileInfo) *hugolib.Site {
+func targetSite(sites *hugolib.HugoSites, fi hugofs.FileMetaInfo) *hugolib.Site {
 	for _, s := range sites.Sites {
-		if fi.Lang() == s.Language.Lang {
+		if fi.Meta().Lang() == s.Language().Lang {
 			return s
 		}
 	}
@@ -123,13 +133,13 @@ func targetSite(sites *hugolib.HugoSites, fi *hugofs.LanguageFileInfo) *hugolib.
 func newContentFromDir(
 	archetypeDir string,
 	sites *hugolib.HugoSites,
-	sourceFs, targetFs afero.Fs,
+	targetFs afero.Fs,
 	cm archetypeMap, name, targetPath string) error {
-
 	for _, f := range cm.otherFiles {
-		filename := f.Filename()
+		meta := f.Meta()
+		filename := meta.Path()
 		// Just copy the file to destination.
-		in, err := sourceFs.Open(filename)
+		in, err := meta.Open()
 		if err != nil {
 			return errors.Wrap(err, "failed to open non-content file")
 		}
@@ -142,6 +152,9 @@ func newContentFromDir(
 		}
 
 		out, err := targetFs.Create(targetFilename)
+		if err != nil {
+			return err
+		}
 
 		_, err = io.Copy(out, in)
 		if err != nil {
@@ -153,7 +166,7 @@ func newContentFromDir(
 	}
 
 	for _, f := range cm.contentFiles {
-		filename := f.Filename()
+		filename := f.Meta().Path()
 		s := targetSite(sites, f)
 		targetFilename := filepath.Join(targetPath, strings.TrimPrefix(filename, archetypeDir))
 
@@ -174,9 +187,9 @@ func newContentFromDir(
 
 type archetypeMap struct {
 	// These needs to be parsed and executed as Go templates.
-	contentFiles []*hugofs.LanguageFileInfo
+	contentFiles []hugofs.FileMetaInfo
 	// These are just copied to destination.
-	otherFiles []*hugofs.LanguageFileInfo
+	otherFiles []hugofs.FileMetaInfo
 	// If the templates needs a fully built site. This can potentially be
 	// expensive, so only do when needed.
 	siteUsed bool
@@ -186,11 +199,9 @@ func mapArcheTypeDir(
 	ps *helpers.PathSpec,
 	fs afero.Fs,
 	archetypeDir string) (archetypeMap, error) {
-
 	var m archetypeMap
 
-	walkFn := func(filename string, fi os.FileInfo, err error) error {
-
+	walkFn := func(path string, fi hugofs.FileMetaInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -199,12 +210,12 @@ func mapArcheTypeDir(
 			return nil
 		}
 
-		fil := fi.(*hugofs.LanguageFileInfo)
+		fil := fi.(hugofs.FileMetaInfo)
 
-		if hugolib.IsContentFile(filename) {
+		if files.IsContentFile(path) {
 			m.contentFiles = append(m.contentFiles, fil)
 			if !m.siteUsed {
-				m.siteUsed, err = usesSiteVar(fs, filename)
+				m.siteUsed, err = usesSiteVar(fs, path)
 				if err != nil {
 					return err
 				}
@@ -217,7 +228,15 @@ func mapArcheTypeDir(
 		return nil
 	}
 
-	if err := helpers.SymbolicWalk(fs, archetypeDir, walkFn); err != nil {
+	walkCfg := hugofs.WalkwayConfig{
+		WalkFn: walkFn,
+		Fs:     fs,
+		Root:   archetypeDir,
+	}
+
+	w := hugofs.NewWalkway(walkCfg)
+
+	if err := w.Walk(); err != nil {
 		return m, errors.Wrapf(err, "failed to walk archetype dir %q", archetypeDir)
 	}
 
@@ -245,23 +264,35 @@ func resolveContentPath(sites *hugolib.HugoSites, fs afero.Fs, targetPath string
 
 	// Try the filename: my-post.en.md
 	for _, ss := range sites.Sites {
-		if strings.Contains(targetPath, "."+ss.Language.Lang+".") {
+		if strings.Contains(targetPath, "."+ss.Language().Lang+".") {
 			s = ss
 			break
 		}
 	}
 
-	for _, ss := range sites.Sites {
-		contentDir := ss.PathSpec.ContentDir
+	var dirLang string
+
+	for _, dir := range sites.BaseFs.Content.Dirs {
+		meta := dir.Meta()
+		contentDir := meta.Filename()
+
 		if !strings.HasSuffix(contentDir, helpers.FilePathSeparator) {
 			contentDir += helpers.FilePathSeparator
 		}
+
 		if strings.HasPrefix(targetPath, contentDir) {
-			siteContentDir = ss.PathSpec.ContentDir
-			if s == nil {
-				s = ss
-			}
+			siteContentDir = contentDir
+			dirLang = meta.Lang()
 			break
+		}
+	}
+
+	if s == nil && dirLang != "" {
+		for _, ss := range sites.Sites {
+			if ss.Lang() == dirLang {
+				s = ss
+				break
+			}
 		}
 	}
 
@@ -277,14 +308,22 @@ func resolveContentPath(sites *hugolib.HugoSites, fs afero.Fs, targetPath string
 		}
 	}
 
+	if siteContentDir == "" {
+	}
+
 	if siteContentDir != "" {
 		pp := filepath.Join(siteContentDir, strings.TrimPrefix(targetPath, siteContentDir))
 		return s.PathSpec.AbsPathify(pp), s
-
 	} else {
-		return s.PathSpec.AbsPathify(filepath.Join(first.PathSpec.ContentDir, targetPath)), s
+		var contentDir string
+		for _, dir := range sites.BaseFs.Content.Dirs {
+			contentDir = dir.Meta().Filename()
+			if dir.Meta().Lang() == s.Lang() {
+				break
+			}
+		}
+		return s.PathSpec.AbsPathify(filepath.Join(contentDir, targetPath)), s
 	}
-
 }
 
 // FindArchetype takes a given kind/archetype of content and returns the path

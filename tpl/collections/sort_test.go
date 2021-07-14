@@ -14,11 +14,16 @@
 package collections
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/gohugoio/hugo/common/maps"
+
 	"github.com/gohugoio/hugo/deps"
 )
+
+type stringsSlice []string
 
 func TestSort(t *testing.T) {
 	t.Parallel()
@@ -42,9 +47,13 @@ func TestSort(t *testing.T) {
 	}{
 		{[]string{"class1", "class2", "class3"}, nil, "asc", []string{"class1", "class2", "class3"}},
 		{[]string{"class3", "class1", "class2"}, nil, "asc", []string{"class1", "class2", "class3"}},
+		{[]string{"CLASS3", "class1", "class2"}, nil, "asc", []string{"class1", "class2", "CLASS3"}},
+		// Issue 6023
+		{stringsSlice{"class3", "class1", "class2"}, nil, "asc", stringsSlice{"class1", "class2", "class3"}},
+
 		{[]int{1, 2, 3, 4, 5}, nil, "asc", []int{1, 2, 3, 4, 5}},
 		{[]int{5, 4, 3, 1, 2}, nil, "asc", []int{1, 2, 3, 4, 5}},
-		// test sort key parameter is focibly set empty
+		// test sort key parameter is forcibly set empty
 		{[]string{"class3", "class1", "class2"}, map[int]string{1: "a"}, "asc", []string{"class1", "class2", "class3"}},
 		// test map sorting by keys
 		{map[string]int{"1": 10, "2": 20, "3": 30, "4": 40, "5": 50}, nil, "asc", []int{10, 20, 30, 40, 50}},
@@ -92,6 +101,20 @@ func TestSort(t *testing.T) {
 			"TstRp",
 			"asc",
 			[]*TstX{{A: "a", B: "b"}, {A: "c", B: "d"}, {A: "e", B: "f"}, {A: "g", B: "h"}, {A: "i", B: "j"}},
+		},
+		// Lower case Params, slice
+		{
+			[]TstParams{{params: maps.Params{"color": "indigo"}}, {params: maps.Params{"color": "blue"}}, {params: maps.Params{"color": "green"}}},
+			".Params.COLOR",
+			"asc",
+			[]TstParams{{params: maps.Params{"color": "blue"}}, {params: maps.Params{"color": "green"}}, {params: maps.Params{"color": "indigo"}}},
+		},
+		// Lower case Params, map
+		{
+			map[string]TstParams{"1": {params: maps.Params{"color": "indigo"}}, "2": {params: maps.Params{"color": "blue"}}, "3": {params: maps.Params{"color": "green"}}},
+			".Params.CoLoR",
+			"asc",
+			[]TstParams{{params: maps.Params{"color": "blue"}}, {params: maps.Params{"color": "green"}}, {params: maps.Params{"color": "indigo"}}},
 		},
 		// test map sorting by struct's method
 		{
@@ -195,6 +218,9 @@ func TestSort(t *testing.T) {
 				map[interface{}]interface{}{"Title": "Foo", "Weight": 10},
 			},
 		},
+		// test boolean values
+		{[]bool{false, true, false}, "value", "asc", []bool{false, false, true}},
+		{[]bool{false, true, false}, "value", "desc", []bool{true, false, false}},
 		// test error cases
 		{(*[]TstX)(nil), nil, "asc", false},
 		{TstX{A: "a", B: "b"}, nil, "asc", false},
@@ -212,26 +238,27 @@ func TestSort(t *testing.T) {
 		},
 		{nil, nil, "asc", false},
 	} {
-		var result interface{}
-		var err error
-		if test.sortByField == nil {
-			result, err = ns.Sort(test.seq)
-		} else {
-			result, err = ns.Sort(test.seq, test.sortByField, test.sortAsc)
-		}
+		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {
+			var result interface{}
+			var err error
+			if test.sortByField == nil {
+				result, err = ns.Sort(test.seq)
+			} else {
+				result, err = ns.Sort(test.seq, test.sortByField, test.sortAsc)
+			}
 
-		if b, ok := test.expect.(bool); ok && !b {
-			if err == nil {
-				t.Errorf("[%d] Sort didn't return an expected error", i)
+			if b, ok := test.expect.(bool); ok && !b {
+				if err == nil {
+					t.Fatal("Sort didn't return an expected error")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("failed: %s", err)
+				}
+				if !reflect.DeepEqual(result, test.expect) {
+					t.Fatalf("Sort called on sequence: %#v | sortByField: `%v` | got\n%#v but expected\n%#v", test.seq, test.sortByField, result, test.expect)
+				}
 			}
-		} else {
-			if err != nil {
-				t.Errorf("[%d] failed: %s", i, err)
-				continue
-			}
-			if !reflect.DeepEqual(result, test.expect) {
-				t.Errorf("[%d] Sort called on sequence: %v | sortByField: `%v` | got %v but expected %v", i, test.seq, test.sortByField, result, test.expect)
-			}
-		}
+		})
 	}
 }

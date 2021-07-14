@@ -65,17 +65,17 @@ You can [set Hugo version](https://www.netlify.com/blog/2017/04/11/netlify-plus-
 
 For production:
 
-```
+{{< code file="netlify.toml" codeLang="toml" >}}
 [context.production.environment]
-  HUGO_VERSION = "0.36"
-```
+  HUGO_VERSION = "0.83.1"
+{{< /code >}}
 
 For testing:
 
-```
+{{< code file="netlify.toml" codeLang="toml" >}}
 [context.deploy-preview.environment]
-  HUGO_VERSION = "0.36"
-```
+  HUGO_VERSION = "0.83.1"
+{{< /code >}}
 
 The Netlify configuration file can be a little hard to understand and get right for the different environment, and you may get some inspiration and tips from this site's `netlify.toml`:
 
@@ -126,6 +126,12 @@ You can checkout a specific version as follows:
 
 ```
 git checkout tags/<version-name>
+```
+
+You can update a theme to the latest version by executing the following command in the *root* directory of your project:
+
+```
+git submodule update --rebase --remote
 ```
 
 ## Next Steps

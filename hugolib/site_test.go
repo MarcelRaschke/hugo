@@ -1,4 +1,4 @@
-// Copyright 2016 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,27 @@
 package hugolib
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/markbates/inflect"
+	"github.com/gobuffalo/flect"
+	"github.com/gohugoio/hugo/config"
+	"github.com/gohugoio/hugo/publisher"
 
-	"github.com/gohugoio/hugo/helpers"
-
+	qt "github.com/frankban/quicktest"
 	"github.com/gohugoio/hugo/deps"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/gohugoio/hugo/resources/page"
 )
 
 const (
 	templateMissingFunc = "{{ .Title | funcdoesnotexists }}"
 	templateWithURLAbs  = "<a href=\"/foobar.jpg\">Going</a>"
 )
-
-func init() {
-	testMode = true
-}
 
 func TestRenderWithInvalidTemplate(t *testing.T) {
 	t.Parallel()
@@ -46,7 +45,6 @@ func TestRenderWithInvalidTemplate(t *testing.T) {
 	withTemplate := createWithTemplateFromNameValues("missing", templateMissingFunc)
 
 	buildSingleSiteExpected(t, true, false, deps.DepsCfg{Fs: fs, Cfg: cfg, WithTemplate: withTemplate}, BuildCfg{})
-
 }
 
 func TestDraftAndFutureRender(t *testing.T) {
@@ -69,7 +67,6 @@ func TestDraftAndFutureRender(t *testing.T) {
 
 		for _, src := range sources {
 			writeSource(t, fs, filepath.Join("content", src[0]), src[1])
-
 		}
 
 		return buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
@@ -77,13 +74,13 @@ func TestDraftAndFutureRender(t *testing.T) {
 
 	// Testing Defaults.. Only draft:true and publishDate in the past should be rendered
 	s := siteSetup(t)
-	if len(s.RegularPages) != 1 {
+	if len(s.RegularPages()) != 1 {
 		t.Fatal("Draft or Future dated content published unexpectedly")
 	}
 
 	// only publishDate in the past should be rendered
 	s = siteSetup(t, "buildDrafts", true)
-	if len(s.RegularPages) != 2 {
+	if len(s.RegularPages()) != 2 {
 		t.Fatal("Future Dated Posts published unexpectedly")
 	}
 
@@ -92,7 +89,7 @@ func TestDraftAndFutureRender(t *testing.T) {
 		"buildDrafts", false,
 		"buildFuture", true)
 
-	if len(s.RegularPages) != 2 {
+	if len(s.RegularPages()) != 2 {
 		t.Fatal("Draft posts published unexpectedly")
 	}
 
@@ -101,10 +98,9 @@ func TestDraftAndFutureRender(t *testing.T) {
 		"buildDrafts", true,
 		"buildFuture", true)
 
-	if len(s.RegularPages) != 4 {
+	if len(s.RegularPages()) != 4 {
 		t.Fatal("Drafts or Future posts not included as expected")
 	}
-
 }
 
 func TestFutureExpirationRender(t *testing.T) {
@@ -120,7 +116,6 @@ func TestFutureExpirationRender(t *testing.T) {
 
 		for _, src := range sources {
 			writeSource(t, fs, filepath.Join("content", src[0]), src[1])
-
 		}
 
 		return buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
@@ -128,17 +123,17 @@ func TestFutureExpirationRender(t *testing.T) {
 
 	s := siteSetup(t)
 
-	if len(s.AllPages) != 1 {
-		if len(s.RegularPages) > 1 {
+	if len(s.AllPages()) != 1 {
+		if len(s.RegularPages()) > 1 {
 			t.Fatal("Expired content published unexpectedly")
 		}
 
-		if len(s.RegularPages) < 1 {
+		if len(s.RegularPages()) < 1 {
 			t.Fatal("Valid content expired unexpectedly")
 		}
 	}
 
-	if s.AllPages[0].title == "doc2" {
+	if s.AllPages()[0].Title() == "doc2" {
 		t.Fatal("Expired content published unexpectedly")
 	}
 }
@@ -147,6 +142,7 @@ func TestLastChange(t *testing.T) {
 	t.Parallel()
 
 	cfg, fs := newTestCfg()
+	c := qt.New(t)
 
 	writeSource(t, fs, filepath.Join("content", "sect/doc1.md"), "---\ntitle: doc1\nweight: 1\ndate: 2014-05-29\n---\n# doc1\n*some content*")
 	writeSource(t, fs, filepath.Join("content", "sect/doc2.md"), "---\ntitle: doc2\nweight: 2\ndate: 2015-05-29\n---\n# doc2\n*some content*")
@@ -156,8 +152,8 @@ func TestLastChange(t *testing.T) {
 
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{SkipRender: true})
 
-	require.False(t, s.Info.LastChange.IsZero(), "Site.LastChange is zero")
-	require.Equal(t, 2017, s.Info.LastChange.Year(), "Site.LastChange should be set to the page with latest Lastmod (year 2017)")
+	c.Assert(s.Info.LastChange().IsZero(), qt.Equals, false)
+	c.Assert(s.Info.LastChange().Year(), qt.Equals, 2017)
 }
 
 // Issue #_index
@@ -165,13 +161,13 @@ func TestPageWithUnderScoreIndexInFilename(t *testing.T) {
 	t.Parallel()
 
 	cfg, fs := newTestCfg()
+	c := qt.New(t)
 
 	writeSource(t, fs, filepath.Join("content", "sect/my_index_file.md"), "---\ntitle: doc1\nweight: 1\ndate: 2014-05-29\n---\n# doc1\n*some content*")
 
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{SkipRender: true})
 
-	require.Len(t, s.RegularPages, 1)
-
+	c.Assert(len(s.RegularPages()), qt.Equals, 1)
 }
 
 // Issue #957
@@ -185,6 +181,7 @@ func TestCrossrefs(t *testing.T) {
 }
 
 func doTestCrossrefs(t *testing.T, relative, uglyURLs bool) {
+	c := qt.New(t)
 
 	baseURL := "http://foo/bar"
 
@@ -228,12 +225,12 @@ THE END.`, refShortcode),
 		// Issue #1753: Should not add a trailing newline after shortcode.
 		{
 			filepath.FromSlash("sect/doc3.md"),
-			fmt.Sprintf(`**Ref 1:**{{< %s "sect/doc3.md" >}}.`, refShortcode),
+			fmt.Sprintf(`**Ref 1:** {{< %s "sect/doc3.md" >}}.`, refShortcode),
 		},
 		// Issue #3703
 		{
 			filepath.FromSlash("sect/doc4.md"),
-			fmt.Sprintf(`**Ref 1:**{{< %s "%s" >}}.`, refShortcode, doc3Slashed),
+			fmt.Sprintf(`**Ref 1:** {{< %s "%s" >}}.`, refShortcode, doc3Slashed),
 		},
 	}
 
@@ -252,28 +249,27 @@ THE END.`, refShortcode),
 		deps.DepsCfg{
 			Fs:           fs,
 			Cfg:          cfg,
-			WithTemplate: createWithTemplateFromNameValues("_default/single.html", "{{.Content}}")},
+			WithTemplate: createWithTemplateFromNameValues("_default/single.html", "{{.Content}}"),
+		},
 		BuildCfg{})
 
-	require.Len(t, s.RegularPages, 4)
+	c.Assert(len(s.RegularPages()), qt.Equals, 4)
 
-	th := testHelper{s.Cfg, s.Fs, t}
+	th := newTestHelper(s.Cfg, s.Fs, t)
 
 	tests := []struct {
 		doc      string
 		expected string
 	}{
 		{filepath.FromSlash(fmt.Sprintf("public/sect/doc1%s", expectedPathSuffix)), fmt.Sprintf("<p>Ref 2: %s/sect/doc2%s</p>\n", expectedBase, expectedURLSuffix)},
-		{filepath.FromSlash(fmt.Sprintf("public/sect/doc2%s", expectedPathSuffix)), fmt.Sprintf("<p><strong>Ref 1:</strong></p>\n\n%s/sect/doc1%s\n\n<p>THE END.</p>\n", expectedBase, expectedURLSuffix)},
-		{filepath.FromSlash(fmt.Sprintf("public/sect/doc3%s", expectedPathSuffix)), fmt.Sprintf("<p><strong>Ref 1:</strong>%s/sect/doc3%s.</p>\n", expectedBase, expectedURLSuffix)},
-		{filepath.FromSlash(fmt.Sprintf("public/sect/doc4%s", expectedPathSuffix)), fmt.Sprintf("<p><strong>Ref 1:</strong>%s/sect/doc3%s.</p>\n", expectedBase, expectedURLSuffix)},
+		{filepath.FromSlash(fmt.Sprintf("public/sect/doc2%s", expectedPathSuffix)), fmt.Sprintf("<p><strong>Ref 1:</strong></p>\n%s/sect/doc1%s\n<p>THE END.</p>\n", expectedBase, expectedURLSuffix)},
+		{filepath.FromSlash(fmt.Sprintf("public/sect/doc3%s", expectedPathSuffix)), fmt.Sprintf("<p><strong>Ref 1:</strong> %s/sect/doc3%s.</p>\n", expectedBase, expectedURLSuffix)},
+		{filepath.FromSlash(fmt.Sprintf("public/sect/doc4%s", expectedPathSuffix)), fmt.Sprintf("<p><strong>Ref 1:</strong> %s/sect/doc3%s.</p>\n", expectedBase, expectedURLSuffix)},
 	}
 
 	for _, test := range tests {
 		th.assertFileContent(test.doc, test.expected)
-
 	}
-
 }
 
 // Issue #939
@@ -286,15 +282,15 @@ func TestShouldAlwaysHaveUglyURLs(t *testing.T) {
 }
 
 func doTestShouldAlwaysHaveUglyURLs(t *testing.T, uglyURLs bool) {
-
 	cfg, fs := newTestCfg()
+	c := qt.New(t)
 
 	cfg.Set("verbose", true)
 	cfg.Set("baseURL", "http://auth/bub")
-	cfg.Set("rssURI", "index.xml")
 	cfg.Set("blackfriday",
 		map[string]interface{}{
-			"plainIDAnchors": true})
+			"plainIDAnchors": true,
+		})
 
 	cfg.Set("uglyURLs", uglyURLs)
 
@@ -327,16 +323,16 @@ func doTestShouldAlwaysHaveUglyURLs(t *testing.T, uglyURLs bool) {
 		expected string
 	}{
 		{filepath.FromSlash("public/index.html"), "Home Sweet Home."},
-		{filepath.FromSlash(expectedPagePath), "\n\n<h1 id=\"title\">title</h1>\n\n<p>some <em>content</em></p>\n"},
+		{filepath.FromSlash(expectedPagePath), "<h1 id=\"title\">title</h1>\n<p>some <em>content</em></p>\n"},
 		{filepath.FromSlash("public/404.html"), "Page Not Found."},
-		{filepath.FromSlash("public/index.xml"), "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<root>RSS</root>"},
-		{filepath.FromSlash("public/sitemap.xml"), "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<root>SITEMAP</root>"},
+		{filepath.FromSlash("public/index.xml"), "<root>RSS</root>"},
+		{filepath.FromSlash("public/sitemap.xml"), "<root>SITEMAP</root>"},
 		// Issue #1923
-		{filepath.FromSlash("public/ugly.html"), "\n\n<h1 id=\"title\">title</h1>\n\n<p>doc2 <em>content</em></p>\n"},
+		{filepath.FromSlash("public/ugly.html"), "<h1 id=\"title\">title</h1>\n<p>doc2 <em>content</em></p>\n"},
 	}
 
-	for _, p := range s.RegularPages {
-		assert.False(t, p.IsHome())
+	for _, p := range s.RegularPages() {
+		c.Assert(p.IsHome(), qt.Equals, false)
 	}
 
 	for _, test := range tests {
@@ -346,7 +342,6 @@ func doTestShouldAlwaysHaveUglyURLs(t *testing.T, uglyURLs bool) {
 			t.Errorf("%s content expected:\n%q\ngot:\n%q", test.doc, test.expected, content)
 		}
 	}
-
 }
 
 // Issue #3355
@@ -358,18 +353,75 @@ func TestShouldNotWriteZeroLengthFilesToDestination(t *testing.T) {
 	writeSource(t, fs, filepath.Join("layouts", "_default/list.html"), "")
 
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
-	th := testHelper{s.Cfg, s.Fs, t}
+	th := newTestHelper(s.Cfg, s.Fs, t)
 
 	th.assertFileNotExist(filepath.Join("public", "index.html"))
 }
 
+func TestMainSections(t *testing.T) {
+	c := qt.New(t)
+	for _, paramSet := range []bool{false, true} {
+		c.Run(fmt.Sprintf("param-%t", paramSet), func(c *qt.C) {
+			v := config.New()
+			if paramSet {
+				v.Set("params", map[string]interface{}{
+					"mainSections": []string{"a1", "a2"},
+				})
+			}
+
+			b := newTestSitesBuilder(c).WithViper(v)
+
+			for i := 0; i < 20; i++ {
+				b.WithContent(fmt.Sprintf("page%d.md", i), `---
+title: "Page"
+---
+`)
+			}
+
+			for i := 0; i < 5; i++ {
+				b.WithContent(fmt.Sprintf("blog/page%d.md", i), `---
+title: "Page"
+tags: ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+---
+`)
+			}
+
+			for i := 0; i < 3; i++ {
+				b.WithContent(fmt.Sprintf("docs/page%d.md", i), `---
+title: "Page"
+---
+`)
+			}
+
+			b.WithTemplates("index.html", `
+mainSections: {{ .Site.Params.mainSections }}
+
+{{ range (where .Site.RegularPages "Type" "in" .Site.Params.mainSections) }}
+Main section page: {{ .RelPermalink }}
+{{ end }}
+`)
+
+			b.Build(BuildCfg{})
+
+			if paramSet {
+				b.AssertFileContent("public/index.html", "mainSections: [a1 a2]")
+			} else {
+				b.AssertFileContent("public/index.html", "mainSections: [blog]", "Main section page: /blog/page3/")
+			}
+		})
+	}
+}
+
 // Issue #1176
 func TestSectionNaming(t *testing.T) {
-	t.Parallel()
 	for _, canonify := range []bool{true, false} {
 		for _, uglify := range []bool{true, false} {
 			for _, pluralize := range []bool{true, false} {
+				canonify := canonify
+				uglify := uglify
+				pluralize := pluralize
 				t.Run(fmt.Sprintf("canonify=%t,uglify=%t,pluralize=%t", canonify, uglify, pluralize), func(t *testing.T) {
+					t.Parallel()
 					doTestSectionNaming(t, canonify, uglify, pluralize)
 				})
 			}
@@ -378,6 +430,7 @@ func TestSectionNaming(t *testing.T) {
 }
 
 func doTestSectionNaming(t *testing.T, canonify, uglify, pluralize bool) {
+	c := qt.New(t)
 
 	var expectedPathSuffix string
 
@@ -407,15 +460,15 @@ func doTestSectionNaming(t *testing.T, canonify, uglify, pluralize bool) {
 	}
 
 	writeSource(t, fs, filepath.Join("layouts", "_default/single.html"), "{{.Content}}")
-	writeSource(t, fs, filepath.Join("layouts", "_default/list.html"), "{{.Title}}")
+	writeSource(t, fs, filepath.Join("layouts", "_default/list.html"), "{{ .Kind }}|{{.Title}}")
 
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
 
 	mainSections, err := s.Info.Param("mainSections")
-	require.NoError(t, err)
-	require.Equal(t, []string{"sect"}, mainSections)
+	c.Assert(err, qt.IsNil)
+	c.Assert(mainSections, qt.DeepEquals, []string{"sect"})
 
-	th := testHelper{s.Cfg, s.Fs, t}
+	th := newTestHelper(s.Cfg, s.Fs, t)
 	tests := []struct {
 		doc         string
 		pluralAware bool
@@ -432,74 +485,10 @@ func doTestSectionNaming(t *testing.T, canonify, uglify, pluralize bool) {
 	for _, test := range tests {
 
 		if test.pluralAware && pluralize {
-			test.expected = inflect.Pluralize(test.expected)
+			test.expected = flect.Pluralize(test.expected)
 		}
 
 		th.assertFileContent(filepath.Join("public", test.doc), test.expected)
-	}
-
-}
-
-func TestSkipRender(t *testing.T) {
-	t.Parallel()
-	sources := [][2]string{
-		{filepath.FromSlash("sect/doc1.html"), "---\nmarkup: markdown\n---\n# title\nsome *content*"},
-		{filepath.FromSlash("sect/doc2.html"), "<!doctype html><html><body>more content</body></html>"},
-		{filepath.FromSlash("sect/doc3.md"), "# doc3\n*some* content"},
-		{filepath.FromSlash("sect/doc4.md"), "---\ntitle: doc4\n---\n# doc4\n*some content*"},
-		{filepath.FromSlash("sect/doc5.html"), "<!doctype html><html>{{ template \"head\" }}<body>body5</body></html>"},
-		{filepath.FromSlash("sect/doc6.html"), "<!doctype html><html>{{ template \"head_abs\" }}<body>body5</body></html>"},
-		{filepath.FromSlash("doc7.html"), "<html><body>doc7 content</body></html>"},
-		{filepath.FromSlash("sect/doc8.html"), "---\nmarkup: md\n---\n# title\nsome *content*"},
-		// Issue #3021
-		{filepath.FromSlash("doc9.html"), "<html><body>doc9: {{< myshortcode >}}</body></html>"},
-	}
-
-	cfg, fs := newTestCfg()
-
-	cfg.Set("verbose", true)
-	cfg.Set("canonifyURLs", true)
-	cfg.Set("uglyURLs", true)
-	cfg.Set("baseURL", "http://auth/bub")
-
-	for _, src := range sources {
-		writeSource(t, fs, filepath.Join("content", src[0]), src[1])
-
-	}
-
-	writeSource(t, fs, filepath.Join("layouts", "_default/single.html"), "{{.Content}}")
-	writeSource(t, fs, filepath.Join("layouts", "head"), "<head><script src=\"script.js\"></script></head>")
-	writeSource(t, fs, filepath.Join("layouts", "head_abs"), "<head><script src=\"/script.js\"></script></head>")
-	writeSource(t, fs, filepath.Join("layouts", "shortcodes", "myshortcode.html"), "SHORT")
-
-	buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
-
-	tests := []struct {
-		doc      string
-		expected string
-	}{
-		{filepath.FromSlash("public/sect/doc1.html"), "\n\n<h1 id=\"title\">title</h1>\n\n<p>some <em>content</em></p>\n"},
-		{filepath.FromSlash("public/sect/doc2.html"), "<!doctype html><html><body>more content</body></html>"},
-		{filepath.FromSlash("public/sect/doc3.html"), "\n\n<h1 id=\"doc3\">doc3</h1>\n\n<p><em>some</em> content</p>\n"},
-		{filepath.FromSlash("public/sect/doc4.html"), "\n\n<h1 id=\"doc4\">doc4</h1>\n\n<p><em>some content</em></p>\n"},
-		{filepath.FromSlash("public/sect/doc5.html"), "<!doctype html><html><head><script src=\"script.js\"></script></head><body>body5</body></html>"},
-		{filepath.FromSlash("public/sect/doc6.html"), "<!doctype html><html><head><script src=\"http://auth/bub/script.js\"></script></head><body>body5</body></html>"},
-		{filepath.FromSlash("public/doc7.html"), "<html><body>doc7 content</body></html>"},
-		{filepath.FromSlash("public/sect/doc8.html"), "\n\n<h1 id=\"title\">title</h1>\n\n<p>some <em>content</em></p>\n"},
-		{filepath.FromSlash("public/doc9.html"), "<html><body>doc9: SHORT</body></html>"},
-	}
-
-	for _, test := range tests {
-		file, err := fs.Destination.Open(test.doc)
-		if err != nil {
-			t.Fatalf("Did not find %s in target.", test.doc)
-		}
-
-		content := helpers.ReaderToString(file)
-
-		if content != test.expected {
-			t.Errorf("%s content expected:\n%q\ngot:\n%q", test.doc, test.expected, content)
-		}
 	}
 }
 
@@ -520,13 +509,12 @@ func TestAbsURLify(t *testing.T) {
 
 			for _, src := range sources {
 				writeSource(t, fs, filepath.Join("content", src[0]), src[1])
-
 			}
 
 			writeSource(t, fs, filepath.Join("layouts", "blue/single.html"), templateWithURLAbs)
 
 			s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
-			th := testHelper{s.Cfg, s.Fs, t}
+			th := newTestHelper(s.Cfg, s.Fs, t)
 
 			tests := []struct {
 				file, expected string
@@ -588,15 +576,26 @@ date = "2012-01-01"
 publishdate = "2012-01-01"
 my_param = "baz"
 my_date = 2010-05-27T07:32:00Z
+summary = "A _custom_ summary"
 categories = [ "hugo" ]
 +++
 Front Matter with Ordered Pages 4. This is longer content`
+
+var weightedPage5 = `+++
+weight = "5"
+title = "Five"
+
+[_build]
+render = "never"
++++
+Front Matter with Ordered Pages 5`
 
 var weightedSources = [][2]string{
 	{filepath.FromSlash("sect/doc1.md"), weightedPage1},
 	{filepath.FromSlash("sect/doc2.md"), weightedPage2},
 	{filepath.FromSlash("sect/doc3.md"), weightedPage3},
 	{filepath.FromSlash("sect/doc4.md"), weightedPage4},
+	{filepath.FromSlash("sect/doc5.md"), weightedPage5},
 }
 
 func TestOrderedPages(t *testing.T) {
@@ -606,45 +605,44 @@ func TestOrderedPages(t *testing.T) {
 
 	for _, src := range weightedSources {
 		writeSource(t, fs, filepath.Join("content", src[0]), src[1])
-
 	}
 
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{SkipRender: true})
 
-	if s.getPage(KindSection, "sect").Pages[1].title != "Three" || s.getPage(KindSection, "sect").Pages[2].title != "Four" {
+	if s.getPage(page.KindSection, "sect").Pages()[1].Title() != "Three" || s.getPage(page.KindSection, "sect").Pages()[2].Title() != "Four" {
 		t.Error("Pages in unexpected order.")
 	}
 
-	bydate := s.RegularPages.ByDate()
+	bydate := s.RegularPages().ByDate()
 
-	if bydate[0].title != "One" {
-		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "One", bydate[0].title)
+	if bydate[0].Title() != "One" {
+		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "One", bydate[0].Title())
 	}
 
 	rev := bydate.Reverse()
-	if rev[0].title != "Three" {
-		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "Three", rev[0].title)
+	if rev[0].Title() != "Three" {
+		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "Three", rev[0].Title())
 	}
 
-	bypubdate := s.RegularPages.ByPublishDate()
+	bypubdate := s.RegularPages().ByPublishDate()
 
-	if bypubdate[0].title != "One" {
-		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "One", bypubdate[0].title)
+	if bypubdate[0].Title() != "One" {
+		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "One", bypubdate[0].Title())
 	}
 
 	rbypubdate := bypubdate.Reverse()
-	if rbypubdate[0].title != "Three" {
-		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "Three", rbypubdate[0].title)
+	if rbypubdate[0].Title() != "Three" {
+		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "Three", rbypubdate[0].Title())
 	}
 
-	bylength := s.RegularPages.ByLength()
-	if bylength[0].title != "One" {
-		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "One", bylength[0].title)
+	bylength := s.RegularPages().ByLength()
+	if bylength[0].Title() != "One" {
+		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "One", bylength[0].Title())
 	}
 
 	rbylength := bylength.Reverse()
-	if rbylength[0].title != "Four" {
-		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "Four", rbylength[0].title)
+	if rbylength[0].Title() != "Four" {
+		t.Errorf("Pages in unexpected order. First should be '%s', got '%s'", "Four", rbylength[0].Title())
 	}
 }
 
@@ -669,7 +667,7 @@ func TestGroupedPages(t *testing.T) {
 	writeSourcesToSource(t, "content", fs, groupedSources...)
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
 
-	rbysection, err := s.RegularPages.GroupBy("Section", "desc")
+	rbysection, err := s.RegularPages().GroupBy("Section", "desc")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -683,14 +681,14 @@ func TestGroupedPages(t *testing.T) {
 	if rbysection[2].Key != "sect1" {
 		t.Errorf("PageGroup array in unexpected order. Third group key should be '%s', got '%s'", "sect1", rbysection[2].Key)
 	}
-	if rbysection[0].Pages[0].title != "Four" {
-		t.Errorf("PageGroup has an unexpected page. First group's pages should have '%s', got '%s'", "Four", rbysection[0].Pages[0].title)
+	if rbysection[0].Pages[0].Title() != "Four" {
+		t.Errorf("PageGroup has an unexpected page. First group's pages should have '%s', got '%s'", "Four", rbysection[0].Pages[0].Title())
 	}
 	if len(rbysection[2].Pages) != 2 {
 		t.Errorf("PageGroup has unexpected number of pages. Third group should have '%d' pages, got '%d' pages", 2, len(rbysection[2].Pages))
 	}
 
-	bytype, err := s.RegularPages.GroupBy("Type", "asc")
+	bytype, err := s.RegularPages().GroupBy("Type", "asc")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -703,14 +701,14 @@ func TestGroupedPages(t *testing.T) {
 	if bytype[2].Key != "sect3" {
 		t.Errorf("PageGroup array in unexpected order. Third group key should be '%s', got '%s'", "sect3", bytype[2].Key)
 	}
-	if bytype[2].Pages[0].title != "Four" {
-		t.Errorf("PageGroup has an unexpected page. Third group's data should have '%s', got '%s'", "Four", bytype[0].Pages[0].title)
+	if bytype[2].Pages[0].Title() != "Four" {
+		t.Errorf("PageGroup has an unexpected page. Third group's data should have '%s', got '%s'", "Four", bytype[0].Pages[0].Title())
 	}
 	if len(bytype[0].Pages) != 2 {
 		t.Errorf("PageGroup has unexpected number of pages. First group should have '%d' pages, got '%d' pages", 2, len(bytype[2].Pages))
 	}
 
-	bydate, err := s.RegularPages.GroupByDate("2006-01", "asc")
+	bydate, err := s.RegularPages().GroupByDate("2006-01", "asc")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -721,7 +719,7 @@ func TestGroupedPages(t *testing.T) {
 		t.Errorf("PageGroup array in unexpected order. Second group key should be '%s', got '%s'", "2012-01", bydate[1].Key)
 	}
 
-	bypubdate, err := s.RegularPages.GroupByPublishDate("2006")
+	bypubdate, err := s.RegularPages().GroupByPublishDate("2006")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -731,14 +729,14 @@ func TestGroupedPages(t *testing.T) {
 	if bypubdate[1].Key != "0001" {
 		t.Errorf("PageGroup array in unexpected order. Second group key should be '%s', got '%s'", "0001", bypubdate[1].Key)
 	}
-	if bypubdate[0].Pages[0].title != "Three" {
-		t.Errorf("PageGroup has an unexpected page. Third group's pages should have '%s', got '%s'", "Three", bypubdate[0].Pages[0].title)
+	if bypubdate[0].Pages[0].Title() != "Three" {
+		t.Errorf("PageGroup has an unexpected page. Third group's pages should have '%s', got '%s'", "Three", bypubdate[0].Pages[0].Title())
 	}
 	if len(bypubdate[0].Pages) != 3 {
 		t.Errorf("PageGroup has unexpected number of pages. First group should have '%d' pages, got '%d' pages", 3, len(bypubdate[0].Pages))
 	}
 
-	byparam, err := s.RegularPages.GroupByParam("my_param", "desc")
+	byparam, err := s.RegularPages().GroupByParam("my_param", "desc")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -751,19 +749,19 @@ func TestGroupedPages(t *testing.T) {
 	if byparam[2].Key != "bar" {
 		t.Errorf("PageGroup array in unexpected order. Third group key should be '%s', got '%s'", "bar", byparam[2].Key)
 	}
-	if byparam[2].Pages[0].title != "Three" {
-		t.Errorf("PageGroup has an unexpected page. Third group's pages should have '%s', got '%s'", "Three", byparam[2].Pages[0].title)
+	if byparam[2].Pages[0].Title() != "Three" {
+		t.Errorf("PageGroup has an unexpected page. Third group's pages should have '%s', got '%s'", "Three", byparam[2].Pages[0].Title())
 	}
 	if len(byparam[0].Pages) != 2 {
 		t.Errorf("PageGroup has unexpected number of pages. First group should have '%d' pages, got '%d' pages", 2, len(byparam[0].Pages))
 	}
 
-	_, err = s.RegularPages.GroupByParam("not_exist")
+	_, err = s.RegularPages().GroupByParam("not_exist")
 	if err == nil {
 		t.Errorf("GroupByParam didn't return an expected error")
 	}
 
-	byOnlyOneParam, err := s.RegularPages.GroupByParam("only_one")
+	byOnlyOneParam, err := s.RegularPages().GroupByParam("only_one")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -774,7 +772,7 @@ func TestGroupedPages(t *testing.T) {
 		t.Errorf("PageGroup array in unexpected order. First group key should be '%s', got '%s'", "yes", byOnlyOneParam[0].Key)
 	}
 
-	byParamDate, err := s.RegularPages.GroupByParamDate("my_date", "2006-01")
+	byParamDate, err := s.RegularPages().GroupByParamDate("my_date", "2006-01")
 	if err != nil {
 		t.Fatalf("Unable to make PageGroup array: %s", err)
 	}
@@ -784,8 +782,8 @@ func TestGroupedPages(t *testing.T) {
 	if byParamDate[1].Key != "1979-05" {
 		t.Errorf("PageGroup array in unexpected order. Second group key should be '%s', got '%s'", "1979-05", byParamDate[1].Key)
 	}
-	if byParamDate[1].Pages[0].title != "One" {
-		t.Errorf("PageGroup has an unexpected page. Second group's pages should have '%s', got '%s'", "One", byParamDate[1].Pages[0].title)
+	if byParamDate[1].Pages[0].Title() != "One" {
+		t.Errorf("PageGroup has an unexpected page. Second group's pages should have '%s', got '%s'", "One", byParamDate[1].Pages[0].Title())
 	}
 	if len(byParamDate[0].Pages) != 2 {
 		t.Errorf("PageGroup has unexpected number of pages. First group should have '%d' pages, got '%d' pages", 2, len(byParamDate[2].Pages))
@@ -841,16 +839,16 @@ func TestWeightedTaxonomies(t *testing.T) {
 	writeSourcesToSource(t, "content", fs, sources...)
 	s := buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
 
-	if s.Taxonomies["tags"]["a"][0].Page.title != "foo" {
-		t.Errorf("Pages in unexpected order, 'foo' expected first, got '%v'", s.Taxonomies["tags"]["a"][0].Page.title)
+	if s.Taxonomies()["tags"]["a"][0].Page.Title() != "foo" {
+		t.Errorf("Pages in unexpected order, 'foo' expected first, got '%v'", s.Taxonomies()["tags"]["a"][0].Page.Title())
 	}
 
-	if s.Taxonomies["categories"]["d"][0].Page.title != "bar" {
-		t.Errorf("Pages in unexpected order, 'bar' expected first, got '%v'", s.Taxonomies["categories"]["d"][0].Page.title)
+	if s.Taxonomies()["categories"]["d"][0].Page.Title() != "bar" {
+		t.Errorf("Pages in unexpected order, 'bar' expected first, got '%v'", s.Taxonomies()["categories"]["d"][0].Page.Title())
 	}
 
-	if s.Taxonomies["categories"]["e"][0].Page.title != "bza" {
-		t.Errorf("Pages in unexpected order, 'bza' expected first, got '%v'", s.Taxonomies["categories"]["e"][0].Page.title)
+	if s.Taxonomies()["categories"]["e"][0].Page.Title() != "bza" {
+		t.Errorf("Pages in unexpected order, 'bza' expected first, got '%v'", s.Taxonomies()["categories"]["e"][0].Page.Title())
 	}
 }
 
@@ -876,6 +874,8 @@ func setupLinkingMockSite(t *testing.T) *Site {
 		{filepath.FromSlash("level2/level3/common.png"), ""},
 
 		{filepath.FromSlash("level2/level3/embedded.dot.md"), ""},
+
+		{filepath.FromSlash("leafbundle/index.md"), ""},
 	}
 
 	cfg, fs := newTestCfg()
@@ -891,14 +891,13 @@ func setupLinkingMockSite(t *testing.T) *Site {
 		map[string]interface{}{})
 	writeSourcesToSource(t, "content", fs, sources...)
 	return buildSingleSite(t, deps.DepsCfg{Fs: fs, Cfg: cfg}, BuildCfg{})
-
 }
 
 func TestRefLinking(t *testing.T) {
 	t.Parallel()
 	site := setupLinkingMockSite(t)
 
-	currentPage := site.getPage(KindPage, "level2/level3/start.md")
+	currentPage := site.getPage(page.KindPage, "level2/level3/start.md")
 	if currentPage == nil {
 		t.Fatalf("failed to find current page in site")
 	}
@@ -941,20 +940,179 @@ func TestRefLinking(t *testing.T) {
 		// try to confuse parsing
 		{"embedded.dot.md", "", true, "/level2/level3/embedded.dot/"},
 
-		//test empty link, as well as fragment only link
+		// test empty link, as well as fragment only link
 		{"", "", true, ""},
 	} {
-		checkLinkCase(site, test.link, currentPage, test.relative, test.outputFormat, test.expected, t, i)
+		t.Run(fmt.Sprintf("t%dt", i), func(t *testing.T) {
+			checkLinkCase(site, test.link, currentPage, test.relative, test.outputFormat, test.expected, t, i)
 
-		//make sure fragment links are also handled
-		checkLinkCase(site, test.link+"#intro", currentPage, test.relative, test.outputFormat, test.expected+"#intro", t, i)
+			// make sure fragment links are also handled
+			checkLinkCase(site, test.link+"#intro", currentPage, test.relative, test.outputFormat, test.expected+"#intro", t, i)
+		})
 	}
 
 	// TODO: and then the failure cases.
 }
 
-func checkLinkCase(site *Site, link string, currentPage *Page, relative bool, outputFormat string, expected string, t *testing.T, i int) {
+func checkLinkCase(site *Site, link string, currentPage page.Page, relative bool, outputFormat string, expected string, t *testing.T, i int) {
+	t.Helper()
 	if out, err := site.refLink(link, currentPage, relative, outputFormat); err != nil || out != expected {
-		t.Errorf("[%d] Expected %q from %q to resolve to %q, got %q - error: %s", i, link, currentPage.absoluteSourceRef(), expected, out, err)
+		t.Fatalf("[%d] Expected %q from %q to resolve to %q, got %q - error: %s", i, link, currentPage.Path(), expected, out, err)
+	}
+}
+
+// https://github.com/gohugoio/hugo/issues/6952
+func TestRefIssues(t *testing.T) {
+	b := newTestSitesBuilder(t)
+	b.WithContent(
+		"post/b1/index.md", "---\ntitle: pb1\n---\nRef: {{< ref \"b2\" >}}",
+		"post/b2/index.md", "---\ntitle: pb2\n---\n",
+		"post/nested-a/content-a.md", "---\ntitle: ca\n---\n{{< ref \"content-b\" >}}",
+		"post/nested-b/content-b.md", "---\ntitle: ca\n---\n",
+	)
+	b.WithTemplates("index.html", `Home`)
+	b.WithTemplates("_default/single.html", `Content: {{ .Content }}`)
+
+	b.Build(BuildCfg{})
+
+	b.AssertFileContent("public/post/b1/index.html", `Content: <p>Ref: http://example.com/post/b2/</p>`)
+	b.AssertFileContent("public/post/nested-a/content-a/index.html", `Content: http://example.com/post/nested-b/content-b/`)
+}
+
+func TestClassCollector(t *testing.T) {
+	for _, minify := range []bool{false, true} {
+		t.Run(fmt.Sprintf("minify-%t", minify), func(t *testing.T) {
+			statsFilename := "hugo_stats.json"
+			defer os.Remove(statsFilename)
+
+			b := newTestSitesBuilder(t)
+			b.WithConfigFile("toml", fmt.Sprintf(`
+
+
+minify = %t
+
+[build]
+  writeStats = true
+
+`, minify))
+
+			b.WithTemplates("index.html", `
+
+<div id="el1" class="a b c">Foo</div>
+
+Some text.
+
+<div class="c d e" id="el2">Foo</div>
+
+<span class=z>FOO</span>
+
+ <a class="text-base hover:text-gradient inline-block px-3 pb-1 rounded lowercase" href="{{ .RelPermalink }}">{{ .Title }}</a>
+
+
+`)
+
+			b.WithContent("p1.md", "")
+
+			b.Build(BuildCfg{})
+
+			b.AssertFileContent("hugo_stats.json", `
+ {
+          "htmlElements": {
+            "tags": [
+              "a",
+              "div",
+              "span"
+            ],
+            "classes": [
+              "a",
+              "b",
+              "c",
+              "d",
+              "e",
+              "hover:text-gradient",
+              "inline-block",
+              "lowercase",
+              "pb-1",
+              "px-3",
+              "rounded",
+              "text-base",
+              "z"
+            ],
+            "ids": [
+              "el1",
+              "el2"
+            ]
+          }
+        }
+`)
+		})
+	}
+}
+
+func TestClassCollectorStress(t *testing.T) {
+	statsFilename := "hugo_stats.json"
+	defer os.Remove(statsFilename)
+
+	b := newTestSitesBuilder(t)
+	b.WithConfigFile("toml", `
+
+disableKinds = ["home", "section", "term", "taxonomy" ]
+
+[languages]
+[languages.en]
+[languages.nb]
+[languages.no]
+[languages.sv]
+
+
+[build]
+  writeStats = true
+
+`)
+
+	b.WithTemplates("_default/single.html", `
+<div class="c d e" id="el2">Foo</div>
+
+Some text.
+
+{{ $n := index (shuffle (seq 1 20)) 0 }}
+
+{{ "<span class=_a>Foo</span>" | strings.Repeat $n | safeHTML }}
+
+<div class="{{ .Title }}">
+ABC.
+</div>
+
+<div class="f"></div>
+
+{{ $n := index (shuffle (seq 1 5)) 0 }}
+
+{{ "<hr class=p-3>" | safeHTML }}
+
+`)
+
+	for _, lang := range []string{"en", "nb", "no", "sv"} {
+		for i := 100; i <= 999; i++ {
+			b.WithContent(fmt.Sprintf("p%d.%s.md", i, lang), fmt.Sprintf("---\ntitle: p%s%d\n---", lang, i))
+		}
+	}
+
+	b.Build(BuildCfg{})
+
+	contentMem := b.FileContent(statsFilename)
+	cb, err := ioutil.ReadFile(statsFilename)
+	b.Assert(err, qt.IsNil)
+	contentFile := string(cb)
+
+	for _, content := range []string{contentMem, contentFile} {
+
+		stats := &publisher.PublishStats{}
+		b.Assert(json.Unmarshal([]byte(content), stats), qt.IsNil)
+
+		els := stats.HTMLElements
+
+		b.Assert(els.Classes, qt.HasLen, 3606) // (4 * 900) + 4 +2
+		b.Assert(els.Tags, qt.HasLen, 8)
+		b.Assert(els.IDs, qt.HasLen, 1)
 	}
 }

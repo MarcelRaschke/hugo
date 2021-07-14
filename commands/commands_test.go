@@ -1,4 +1,4 @@
-// Copyright 2018 The Hugo Authors. All rights reserved.
+// Copyright 2019 The Hugo Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,131 +20,256 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/gohugoio/hugo/config"
 
-	"github.com/stretchr/testify/require"
+	"github.com/gohugoio/hugo/htesting"
+
+	"github.com/spf13/afero"
+
+	"github.com/gohugoio/hugo/hugofs"
+
+	"github.com/gohugoio/hugo/common/types"
+
+	"github.com/spf13/cobra"
+
+	qt "github.com/frankban/quicktest"
 )
 
 func TestExecute(t *testing.T) {
+	c := qt.New(t)
 
-	assert := require.New(t)
+	createSite := func(c *qt.C) (string, func()) {
+		dir, clean, err := createSimpleTestSite(t, testSiteConfig{})
+		c.Assert(err, qt.IsNil)
+		return dir, clean
+	}
 
-	dir, err := createSimpleTestSite(t)
-	assert.NoError(err)
+	c.Run("hugo", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		resp := Execute([]string{"-s=" + dir})
+		c.Assert(resp.Err, qt.IsNil)
+		result := resp.Result
+		c.Assert(len(result.Sites) == 1, qt.Equals, true)
+		c.Assert(len(result.Sites[0].RegularPages()) == 1, qt.Equals, true)
+		c.Assert(result.Sites[0].Info.Params()["myparam"], qt.Equals, "paramproduction")
+	})
 
-	defer func() {
-		os.RemoveAll(dir)
-	}()
+	c.Run("hugo, set environment", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		resp := Execute([]string{"-s=" + dir, "-e=staging"})
+		c.Assert(resp.Err, qt.IsNil)
+		result := resp.Result
+		c.Assert(result.Sites[0].Info.Params()["myparam"], qt.Equals, "paramstaging")
+	})
 
-	resp := Execute([]string{"-s=" + dir})
-	assert.NoError(resp.Err)
-	result := resp.Result
-	assert.True(len(result.Sites) == 1)
-	assert.True(len(result.Sites[0].RegularPages) == 1)
+	c.Run("convert toJSON", func(c *qt.C) {
+		dir, clean := createSite(c)
+		output := filepath.Join(dir, "myjson")
+		defer clean()
+		resp := Execute([]string{"convert", "toJSON", "-s=" + dir, "-e=staging", "-o=" + output})
+		c.Assert(resp.Err, qt.IsNil)
+		converted := readFileFrom(c, filepath.Join(output, "content", "p1.md"))
+		c.Assert(converted, qt.Equals, "{\n   \"title\": \"P1\",\n   \"weight\": 1\n}\n\nContent\n\n", qt.Commentf(converted))
+	})
+
+	c.Run("config, set environment", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		out, err := captureStdout(func() error {
+			resp := Execute([]string{"config", "-s=" + dir, "-e=staging"})
+			return resp.Err
+		})
+		c.Assert(err, qt.IsNil)
+		c.Assert(out, qt.Contains, "params = map[myparam:paramstaging]", qt.Commentf(out))
+	})
+
+	c.Run("deploy, environment set", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		resp := Execute([]string{"deploy", "-s=" + dir, "-e=staging", "--target=mydeployment", "--dryRun"})
+		c.Assert(resp.Err, qt.Not(qt.IsNil))
+		c.Assert(resp.Err.Error(), qt.Contains, `no driver registered for "hugocloud"`)
+	})
+
+	c.Run("list", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		out, err := captureStdout(func() error {
+			resp := Execute([]string{"list", "all", "-s=" + dir, "-e=staging"})
+			return resp.Err
+		})
+		c.Assert(err, qt.IsNil)
+		c.Assert(out, qt.Contains, "p1.md")
+	})
+
+	c.Run("new theme", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		themesDir := filepath.Join(dir, "mythemes")
+		resp := Execute([]string{"new", "theme", "mytheme", "-s=" + dir, "-e=staging", "--themesDir=" + themesDir})
+		c.Assert(resp.Err, qt.IsNil)
+		themeTOML := readFileFrom(c, filepath.Join(themesDir, "mytheme", "theme.toml"))
+		c.Assert(themeTOML, qt.Contains, "name = \"Mytheme\"")
+	})
+
+	c.Run("new site", func(c *qt.C) {
+		dir, clean := createSite(c)
+		defer clean()
+		siteDir := filepath.Join(dir, "mysite")
+		resp := Execute([]string{"new", "site", siteDir, "-e=staging"})
+		c.Assert(resp.Err, qt.IsNil)
+		config := readFileFrom(c, filepath.Join(siteDir, "config.toml"))
+		c.Assert(config, qt.Contains, "baseURL = \"http://example.org/\"")
+		checkNewSiteInited(c, siteDir)
+	})
 }
 
-func TestCommandsPersistentFlags(t *testing.T) {
-	assert := require.New(t)
+func checkNewSiteInited(c *qt.C, basepath string) {
+	paths := []string{
+		filepath.Join(basepath, "layouts"),
+		filepath.Join(basepath, "content"),
+		filepath.Join(basepath, "archetypes"),
+		filepath.Join(basepath, "static"),
+		filepath.Join(basepath, "data"),
+		filepath.Join(basepath, "config.toml"),
+	}
+
+	for _, path := range paths {
+		_, err := os.Stat(path)
+		c.Assert(err, qt.IsNil)
+	}
+}
+
+func readFileFrom(c *qt.C, filename string) string {
+	c.Helper()
+	filename = filepath.Clean(filename)
+	b, err := afero.ReadFile(hugofs.Os, filename)
+	c.Assert(err, qt.IsNil)
+	return string(b)
+}
+
+func TestFlags(t *testing.T) {
+	c := qt.New(t)
 
 	noOpRunE := func(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
 	tests := []struct {
+		name  string
 		args  []string
-		check func(command []cmder)
-	}{{[]string{"server",
-		"--config=myconfig.toml",
-		"--contentDir=mycontent",
-		"--disableKinds=page,home",
-		"--layoutDir=mylayouts",
-		"--theme=mytheme",
-		"--gc",
-		"--themesDir=mythemes",
-		"--cleanDestinationDir",
-		"--navigateToChanged",
-		"--disableLiveReload",
-		"--noHTTPCache",
-		"--i18n-warnings",
-		"--destination=/tmp/mydestination",
-		"-b=https://example.com/b/",
-		"--port=1366",
-		"--renderToDisk",
-		"--source=mysource",
-	}, func(commands []cmder) {
-		var sc *serverCmd
-		for _, command := range commands {
-			if b, ok := command.(commandsBuilderGetter); ok {
-				v := b.getCommandsBuilder().hugoBuilderCommon
-				assert.Equal("myconfig.toml", v.cfgFile)
-				assert.Equal("mysource", v.source)
-				assert.Equal("https://example.com/b/", v.baseURL)
-			}
+		check func(c *qt.C, cmd *serverCmd)
+	}{
+		{
+			// https://github.com/gohugoio/hugo/issues/7642
+			name: "ignoreVendor as bool",
+			args: []string{"server", "--ignoreVendor"},
+			check: func(c *qt.C, cmd *serverCmd) {
+				cfg := config.New()
+				cmd.flagsToConfig(cfg)
+				c.Assert(cfg.Get("ignoreVendor"), qt.Equals, true)
+			},
+		},
+		{
+			// https://github.com/gohugoio/hugo/issues/7642
+			name: "ignoreVendorPaths",
+			args: []string{"server", "--ignoreVendorPaths=github.com/**"},
+			check: func(c *qt.C, cmd *serverCmd) {
+				cfg := config.New()
+				cmd.flagsToConfig(cfg)
+				c.Assert(cfg.Get("ignoreVendorPaths"), qt.Equals, "github.com/**")
+			},
+		},
+		{
+			name: "Persistent flags",
+			args: []string{
+				"server",
+				"--config=myconfig.toml",
+				"--configDir=myconfigdir",
+				"--contentDir=mycontent",
+				"--disableKinds=page,home",
+				"--environment=testing",
+				"--configDir=myconfigdir",
+				"--layoutDir=mylayouts",
+				"--theme=mytheme",
+				"--gc",
+				"--themesDir=mythemes",
+				"--cleanDestinationDir",
+				"--navigateToChanged",
+				"--disableLiveReload",
+				"--noHTTPCache",
+				"--i18n-warnings",
+				"--destination=/tmp/mydestination",
+				"-b=https://example.com/b/",
+				"--port=1366",
+				"--renderToDisk",
+				"--source=mysource",
+				"--path-warnings",
+			},
+			check: func(c *qt.C, sc *serverCmd) {
+				c.Assert(sc, qt.Not(qt.IsNil))
+				c.Assert(sc.navigateToChanged, qt.Equals, true)
+				c.Assert(sc.disableLiveReload, qt.Equals, true)
+				c.Assert(sc.noHTTPCache, qt.Equals, true)
+				c.Assert(sc.renderToDisk, qt.Equals, true)
+				c.Assert(sc.serverPort, qt.Equals, 1366)
+				c.Assert(sc.environment, qt.Equals, "testing")
 
-			if srvCmd, ok := command.(*serverCmd); ok {
-				sc = srvCmd
-			}
-		}
+				cfg := config.New()
+				sc.flagsToConfig(cfg)
+				c.Assert(cfg.GetString("publishDir"), qt.Equals, "/tmp/mydestination")
+				c.Assert(cfg.GetString("contentDir"), qt.Equals, "mycontent")
+				c.Assert(cfg.GetString("layoutDir"), qt.Equals, "mylayouts")
+				c.Assert(cfg.GetStringSlice("theme"), qt.DeepEquals, []string{"mytheme"})
+				c.Assert(cfg.GetString("themesDir"), qt.Equals, "mythemes")
+				c.Assert(cfg.GetString("baseURL"), qt.Equals, "https://example.com/b/")
 
-		assert.NotNil(sc)
-		assert.True(sc.navigateToChanged)
-		assert.True(sc.disableLiveReload)
-		assert.True(sc.noHTTPCache)
-		assert.True(sc.renderToDisk)
-		assert.Equal(1366, sc.serverPort)
+				c.Assert(cfg.Get("disableKinds"), qt.DeepEquals, []string{"page", "home"})
 
-		cfg := viper.New()
-		sc.flagsToConfig(cfg)
-		assert.Equal("/tmp/mydestination", cfg.GetString("publishDir"))
-		assert.Equal("mycontent", cfg.GetString("contentDir"))
-		assert.Equal("mylayouts", cfg.GetString("layoutDir"))
-		assert.Equal("mytheme", cfg.GetString("theme"))
-		assert.Equal("mythemes", cfg.GetString("themesDir"))
-		assert.Equal("https://example.com/b/", cfg.GetString("baseURL"))
+				c.Assert(cfg.GetBool("gc"), qt.Equals, true)
 
-		assert.Equal([]string{"page", "home"}, cfg.Get("disableKinds"))
+				// The flag is named path-warnings
+				c.Assert(cfg.GetBool("logPathWarnings"), qt.Equals, true)
 
-		assert.True(cfg.GetBool("gc"))
-
-		// The flag is named i18n-warnings
-		assert.True(cfg.GetBool("logI18nWarnings"))
-
-	}}}
-
-	for _, test := range tests {
-		b := newCommandsBuilder()
-		root := b.addAll().build()
-
-		for _, c := range b.commands {
-			if c.getCommand() == nil {
-				continue
-			}
-			// We are only intereseted in the flag handling here.
-			c.getCommand().RunE = noOpRunE
-		}
-		rootCmd := root.getCommand()
-		rootCmd.SetArgs(test.args)
-		assert.NoError(rootCmd.Execute())
-		test.check(b.commands)
+				// The flag is named i18n-warnings
+				c.Assert(cfg.GetBool("logI18nWarnings"), qt.Equals, true)
+			},
+		},
 	}
 
+	for _, test := range tests {
+		c.Run(test.name, func(c *qt.C) {
+			b := newCommandsBuilder()
+			root := b.addAll().build()
+
+			for _, cmd := range b.commands {
+				if cmd.getCommand() == nil {
+					continue
+				}
+				// We are only intereseted in the flag handling here.
+				cmd.getCommand().RunE = noOpRunE
+			}
+			rootCmd := root.getCommand()
+			rootCmd.SetArgs(test.args)
+			c.Assert(rootCmd.Execute(), qt.IsNil)
+			test.check(c, b.commands[0].(*serverCmd))
+		})
+	}
 }
 
 func TestCommandsExecute(t *testing.T) {
+	c := qt.New(t)
 
-	assert := require.New(t)
+	dir, clean, err := createSimpleTestSite(t, testSiteConfig{})
+	c.Assert(err, qt.IsNil)
 
-	dir, err := createSimpleTestSite(t)
-	assert.NoError(err)
+	dirOut, clean2, err := htesting.CreateTempDir(hugofs.Os, "hugo-cli-out")
+	c.Assert(err, qt.IsNil)
 
-	dirOut, err := ioutil.TempDir("", "hugo-cli-out")
-	assert.NoError(err)
-
-	defer func() {
-		os.RemoveAll(dir)
-		os.RemoveAll(dirOut)
-	}()
+	defer clean()
+	defer clean2()
 
 	sourceFlag := fmt.Sprintf("-s=%s", dir)
 
@@ -160,7 +285,6 @@ func TestCommandsExecute(t *testing.T) {
 		{nil, []string{sourceFlag}, ""},
 		{nil, []string{sourceFlag, "--renderToMemory"}, ""},
 		{[]string{"config"}, []string{sourceFlag}, ""},
-		{[]string{"benchmark"}, []string{sourceFlag, "-n=1"}, ""},
 		{[]string{"convert", "toTOML"}, []string{sourceFlag, "-o=" + filepath.Join(dirOut, "toml")}, ""},
 		{[]string{"convert", "toYAML"}, []string{sourceFlag, "-o=" + filepath.Join(dirOut, "yaml")}, ""},
 		{[]string{"convert", "toJSON"}, []string{sourceFlag, "-o=" + filepath.Join(dirOut, "json")}, ""},
@@ -179,8 +303,8 @@ func TestCommandsExecute(t *testing.T) {
 	}
 
 	for _, test := range tests {
-
-		hugoCmd := newCommandsBuilder().addAll().build().getCommand()
+		b := newCommandsBuilder().addAll().build()
+		hugoCmd := b.getCommand()
 		test.flags = append(test.flags, "--quiet")
 		hugoCmd.SetArgs(append(test.commands, test.flags...))
 
@@ -190,31 +314,65 @@ func TestCommandsExecute(t *testing.T) {
 
 		_, err := hugoCmd.ExecuteC()
 		if test.expectErrToContain != "" {
-			assert.Error(err, fmt.Sprintf("%v", test.commands))
-			assert.Contains(err.Error(), test.expectErrToContain)
+			c.Assert(err, qt.Not(qt.IsNil))
+			c.Assert(err.Error(), qt.Contains, test.expectErrToContain)
 		} else {
-			assert.NoError(err, fmt.Sprintf("%v", test.commands))
+			c.Assert(err, qt.IsNil)
+		}
+
+		// Assert that we have not left any development debug artifacts in
+		// the code.
+		if b.c != nil {
+			_, ok := b.c.destinationFs.(types.DevMarker)
+			c.Assert(ok, qt.Equals, false)
 		}
 
 	}
-
 }
 
-func createSimpleTestSite(t *testing.T) (string, error) {
-	d, e := ioutil.TempDir("", "hugo-cli")
+type testSiteConfig struct {
+	configTOML string
+	contentDir string
+}
+
+func createSimpleTestSite(t *testing.T, cfg testSiteConfig) (string, func(), error) {
+	d, clean, e := htesting.CreateTempDir(hugofs.Os, "hugo-cli")
 	if e != nil {
-		return "", e
+		return "", nil, e
 	}
 
-	// Just the basic. These are for CLI tests, not site testing.
-	writeFile(t, filepath.Join(d, "config.toml"), `
+	cfgStr := `
 
 baseURL = "https://example.org"
 title = "Hugo Commands"
 
+
+`
+
+	contentDir := "content"
+
+	if cfg.configTOML != "" {
+		cfgStr = cfg.configTOML
+	}
+	if cfg.contentDir != "" {
+		contentDir = cfg.contentDir
+	}
+
+	os.MkdirAll(filepath.Join(d, "public"), 0777)
+
+	// Just the basic. These are for CLI tests, not site testing.
+	writeFile(t, filepath.Join(d, "config.toml"), cfgStr)
+	writeFile(t, filepath.Join(d, "config", "staging", "params.toml"), `myparam="paramstaging"`)
+	writeFile(t, filepath.Join(d, "config", "staging", "deployment.toml"), `
+[[targets]]
+name = "mydeployment"
+URL = "hugocloud://hugotestbucket"
 `)
 
-	writeFile(t, filepath.Join(d, "content", "p1.md"), `
+	writeFile(t, filepath.Join(d, "config", "testing", "params.toml"), `myparam="paramtesting"`)
+	writeFile(t, filepath.Join(d, "config", "production", "params.toml"), `myparam="paramproduction"`)
+
+	writeFile(t, filepath.Join(d, contentDir, "p1.md"), `
 ---
 title: "P1"
 weight: 1
@@ -233,11 +391,11 @@ Single: {{ .Title }}
 	writeFile(t, filepath.Join(d, "layouts", "_default", "list.html"), `
 
 List: {{ .Title }}
+Environment: {{ hugo.Environment }}
 
 `)
 
-	return d, nil
-
+	return d, clean, nil
 }
 
 func writeFile(t *testing.T, filename, content string) {

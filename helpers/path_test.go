@@ -27,49 +27,14 @@ import (
 
 	"github.com/gohugoio/hugo/langs"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/stretchr/testify/assert"
+	qt "github.com/frankban/quicktest"
 
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/spf13/afero"
-	"github.com/spf13/viper"
 )
 
-func TestMakeSegment(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"  FOO bar  ", "foo-bar"},
-		{"Foo.Bar/fOO_bAr-Foo", "foo.bar-foo_bar-foo"},
-		{"FOO,bar:FooBar", "foobarfoobar"},
-		{"foo/BAR.HTML", "foo-bar.html"},
-		{"трям/трям", "трям-трям"},
-		{"은행", "은행"},
-		{"Say What??", "say-what"},
-		{"Your #1 Fan", "your-1-fan"},
-		{"Red & Blue", "red-blue"},
-		{"double//slash", "double-slash"},
-		{"triple///slash", "triple-slash"},
-		{"-my/way-", "my-way"},
-	}
-
-	for _, test := range tests {
-		v := newTestCfg()
-
-		l := langs.NewDefaultLanguage(v)
-		p, err := NewPathSpec(hugofs.NewMem(v), l)
-		require.NoError(t, err)
-
-		output := p.MakeSegment(test.input)
-		if output != test.expected {
-			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
-		}
-	}
-}
-
 func TestMakePath(t *testing.T) {
+	c := qt.New(t)
 	tests := []struct {
 		input         string
 		expected      string
@@ -95,8 +60,8 @@ func TestMakePath(t *testing.T) {
 		v.Set("removePathAccents", test.removeAccents)
 
 		l := langs.NewDefaultLanguage(v)
-		p, err := NewPathSpec(hugofs.NewMem(v), l)
-		require.NoError(t, err)
+		p, err := NewPathSpec(hugofs.NewMem(v), l, nil)
+		c.Assert(err, qt.IsNil)
 
 		output := p.MakePath(test.input)
 		if output != test.expected {
@@ -106,18 +71,9 @@ func TestMakePath(t *testing.T) {
 }
 
 func TestMakePathSanitized(t *testing.T) {
-	v := viper.New()
-	v.Set("contentDir", "content")
-	v.Set("dataDir", "data")
-	v.Set("i18nDir", "i18n")
-	v.Set("layoutDir", "layouts")
-	v.Set("assetDir", "assets")
-	v.Set("resourceDir", "resources")
-	v.Set("publishDir", "public")
-	v.Set("archetypeDir", "archetypes")
+	v := newTestCfg()
 
-	l := langs.NewDefaultLanguage(v)
-	p, _ := NewPathSpec(hugofs.NewMem(v), l)
+	p, _ := NewPathSpec(hugofs.NewMem(v), v, nil)
 
 	tests := []struct {
 		input    string
@@ -145,7 +101,7 @@ func TestMakePathSanitizedDisablePathToLower(t *testing.T) {
 	v.Set("disablePathToLower", true)
 
 	l := langs.NewDefaultLanguage(v)
-	p, _ := NewPathSpec(hugofs.NewMem(v), l)
+	p, _ := NewPathSpec(hugofs.NewMem(v), l, nil)
 
 	tests := []struct {
 		input    string
@@ -165,65 +121,6 @@ func TestMakePathSanitizedDisablePathToLower(t *testing.T) {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
 		}
 	}
-}
-
-func TestGetRelativePath(t *testing.T) {
-	tests := []struct {
-		path   string
-		base   string
-		expect interface{}
-	}{
-		{filepath.FromSlash("/a/b"), filepath.FromSlash("/a"), filepath.FromSlash("b")},
-		{filepath.FromSlash("/a/b/c/"), filepath.FromSlash("/a"), filepath.FromSlash("b/c/")},
-		{filepath.FromSlash("/c"), filepath.FromSlash("/a/b"), filepath.FromSlash("../../c")},
-		{filepath.FromSlash("/c"), "", false},
-	}
-	for i, this := range tests {
-		// ultimately a fancy wrapper around filepath.Rel
-		result, err := GetRelativePath(this.path, this.base)
-
-		if b, ok := this.expect.(bool); ok && !b {
-			if err == nil {
-				t.Errorf("[%d] GetRelativePath didn't return an expected error", i)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("[%d] GetRelativePath failed: %s", i, err)
-				continue
-			}
-			if result != this.expect {
-				t.Errorf("[%d] GetRelativePath got %v but expected %v", i, result, this.expect)
-			}
-		}
-
-	}
-}
-
-func TestGetRealPath(t *testing.T) {
-	if runtime.GOOS == "windows" && os.Getenv("CI") == "" {
-		t.Skip("Skip TestGetRealPath as os.Symlink needs administrator rights on Windows")
-	}
-
-	d1, err := ioutil.TempDir("", "d1")
-	defer os.Remove(d1)
-	fs := afero.NewOsFs()
-
-	rp1, err := GetRealPath(fs, d1)
-	require.NoError(t, err)
-	assert.Equal(t, d1, rp1)
-
-	sym := filepath.Join(os.TempDir(), "d1sym")
-	err = os.Symlink(d1, sym)
-	require.NoError(t, err)
-	defer os.Remove(sym)
-
-	rp2, err := GetRealPath(fs, sym)
-	require.NoError(t, err)
-
-	// On OS X, the temp folder is itself a symbolic link (to /private...)
-	// This has to do for now.
-	assert.True(t, strings.HasSuffix(rp2, d1))
-
 }
 
 func TestMakePathRelative(t *testing.T) {
@@ -254,7 +151,6 @@ func TestGetDottedRelativePath(t *testing.T) {
 	for _, f := range []func(string) string{filepath.FromSlash, func(s string) string { return s }} {
 		doTestGetDottedRelativePath(f, t)
 	}
-
 }
 
 func doTestGetDottedRelativePath(urlFixer func(string) string, t *testing.T) {
@@ -299,37 +195,6 @@ func TestMakeTitle(t *testing.T) {
 	}
 	for i, d := range data {
 		output := MakeTitle(d.input)
-		if d.expected != output {
-			t.Errorf("Test %d failed. Expected %q got %q", i, d.expected, output)
-		}
-	}
-}
-
-// Replace Extension is probably poorly named, but the intent of the
-// function is to accept a path and return only the file name with a
-// new extension. It's intentionally designed to strip out the path
-// and only provide the name. We should probably rename the function to
-// be more explicit at some point.
-func TestReplaceExtension(t *testing.T) {
-	type test struct {
-		input, newext, expected string
-	}
-	data := []test{
-		// These work according to the above definition
-		{"/some/random/path/file.xml", "html", "file.html"},
-		{"/banana.html", "xml", "banana.xml"},
-		{"./banana.html", "xml", "banana.xml"},
-		{"banana/pie/index.html", "xml", "index.xml"},
-		{"../pies/fish/index.html", "xml", "index.xml"},
-		// but these all fail
-		{"filename-without-an-ext", "ext", "filename-without-an-ext.ext"},
-		{"/filename-without-an-ext", "ext", "filename-without-an-ext.ext"},
-		{"/directory/mydir/", "ext", ".ext"},
-		{"mydir/", "ext", ".ext"},
-	}
-
-	for i, d := range data {
-		output := ReplaceExtension(filepath.FromSlash(d.input), d.newext)
 		if d.expected != output {
 			t.Errorf("Test %d failed. Expected %q got %q", i, d.expected, output)
 		}
@@ -451,6 +316,7 @@ func createNonZeroSizedFileInTempDir() (*os.File, error) {
 	f, err := createZeroSizedFileInTempDir()
 	if err != nil {
 		// no file ??
+		return nil, err
 	}
 	byteString := []byte("byteString")
 	err = ioutil.WriteFile(f.Name(), byteString, 0644)
@@ -463,10 +329,7 @@ func createNonZeroSizedFileInTempDir() (*os.File, error) {
 }
 
 func deleteFileInTempDir(f *os.File) {
-	err := os.Remove(f.Name())
-	if err != nil {
-		// now what?
-	}
+	_ = os.Remove(f.Name())
 }
 
 func createEmptyTempDir() (string, error) {
@@ -482,7 +345,7 @@ func createEmptyTempDir() (string, error) {
 func createTempDirWithZeroLengthFiles() (string, error) {
 	d, dirErr := createEmptyTempDir()
 	if dirErr != nil {
-		//now what?
+		return "", dirErr
 	}
 	filePrefix := "_path_test_"
 	_, fileErr := ioutil.TempFile(d, filePrefix) // dir is os.TempDir()
@@ -494,13 +357,12 @@ func createTempDirWithZeroLengthFiles() (string, error) {
 	}
 	// the dir now has one, zero length file in it
 	return d, nil
-
 }
 
 func createTempDirWithNonZeroLengthFiles() (string, error) {
 	d, dirErr := createEmptyTempDir()
 	if dirErr != nil {
-		//now what?
+		return "", dirErr
 	}
 	filePrefix := "_path_test_"
 	f, fileErr := ioutil.TempFile(d, filePrefix) // dir is os.TempDir()
@@ -523,14 +385,10 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 
 	// the dir now has one, zero length file in it
 	return d, nil
-
 }
 
 func deleteTempDir(d string) {
-	err := os.RemoveAll(d)
-	if err != nil {
-		// now what?
-	}
+	_ = os.RemoveAll(d)
 }
 
 func TestExists(t *testing.T) {
@@ -565,12 +423,9 @@ func TestExists(t *testing.T) {
 			t.Errorf("Test %d failed. Expected %q got %q", i, d.expectedErr, err)
 		}
 	}
-
 }
 
 func TestAbsPathify(t *testing.T) {
-	defer viper.Reset()
-
 	type test struct {
 		inPath, workingDir, expected string
 	}
@@ -590,7 +445,6 @@ func TestAbsPathify(t *testing.T) {
 	}
 
 	for i, d := range data {
-		viper.Reset()
 		// todo see comment in AbsPathify
 		ps := newTestDefaultPathSpec("workingDir", d.workingDir)
 
@@ -619,91 +473,41 @@ func TestAbsPathify(t *testing.T) {
 			}
 		}
 	}
-
 }
 
-func TestExtNoDelimiter(t *testing.T) {
-	assert := require.New(t)
-	assert.Equal("json", ExtNoDelimiter(filepath.FromSlash("/my/data.json")))
-}
-
-func TestFilename(t *testing.T) {
-	type test struct {
-		input, expected string
-	}
-	data := []test{
-		{"index.html", "index"},
-		{"./index.html", "index"},
-		{"/index.html", "index"},
-		{"index", "index"},
-		{"/tmp/index.html", "index"},
-		{"./filename-no-ext", "filename-no-ext"},
-		{"/filename-no-ext", "filename-no-ext"},
-		{"filename-no-ext", "filename-no-ext"},
-		{"directory/", ""}, // no filename case??
-		{"directory/.hidden.ext", ".hidden"},
-		{"./directory/../~/banana/gold.fish", "gold"},
-		{"../directory/banana.man", "banana"},
-		{"~/mydir/filename.ext", "filename"},
-		{"./directory//tmp/filename.ext", "filename"},
+func TestExtractAndGroupRootPaths(t *testing.T) {
+	in := []string{
+		filepath.FromSlash("/a/b/c/d"),
+		filepath.FromSlash("/a/b/c/e"),
+		filepath.FromSlash("/a/b/e/f"),
+		filepath.FromSlash("/a/b"),
+		filepath.FromSlash("/a/b/c/b/g"),
+		filepath.FromSlash("/c/d/e"),
 	}
 
-	for i, d := range data {
-		output := Filename(filepath.FromSlash(d.input))
-		if d.expected != output {
-			t.Errorf("Test %d failed. Expected %q got %q", i, d.expected, output)
-		}
-	}
-}
+	inCopy := make([]string, len(in))
+	copy(inCopy, in)
 
-func TestFileAndExt(t *testing.T) {
-	type test struct {
-		input, expectedFile, expectedExt string
-	}
-	data := []test{
-		{"index.html", "index", ".html"},
-		{"./index.html", "index", ".html"},
-		{"/index.html", "index", ".html"},
-		{"index", "index", ""},
-		{"/tmp/index.html", "index", ".html"},
-		{"./filename-no-ext", "filename-no-ext", ""},
-		{"/filename-no-ext", "filename-no-ext", ""},
-		{"filename-no-ext", "filename-no-ext", ""},
-		{"directory/", "", ""}, // no filename case??
-		{"directory/.hidden.ext", ".hidden", ".ext"},
-		{"./directory/../~/banana/gold.fish", "gold", ".fish"},
-		{"../directory/banana.man", "banana", ".man"},
-		{"~/mydir/filename.ext", "filename", ".ext"},
-		{"./directory//tmp/filename.ext", "filename", ".ext"},
-	}
+	result := ExtractAndGroupRootPaths(in)
 
-	for i, d := range data {
-		file, ext := fileAndExt(filepath.FromSlash(d.input), fpb)
-		if d.expectedFile != file {
-			t.Errorf("Test %d failed. Expected filename %q got %q.", i, d.expectedFile, file)
-		}
-		if d.expectedExt != ext {
-			t.Errorf("Test %d failed. Expected extension %q got %q.", i, d.expectedExt, ext)
-		}
-	}
+	c := qt.New(t)
+	c.Assert(fmt.Sprint(result), qt.Equals, filepath.FromSlash("[/a/b/{c,e} /c/d/e]"))
 
-}
-
-func TestPathPrep(t *testing.T) {
-
-}
-
-func TestPrettifyPath(t *testing.T) {
-
+	// Make sure the original is preserved
+	c.Assert(in, qt.DeepEquals, inCopy)
 }
 
 func TestExtractRootPaths(t *testing.T) {
 	tests := []struct {
 		input    []string
 		expected []string
-	}{{[]string{filepath.FromSlash("a/b"), filepath.FromSlash("a/b/c/"), "b",
-		filepath.FromSlash("/c/d"), filepath.FromSlash("d/"), filepath.FromSlash("//e//")},
-		[]string{"a", "a", "b", "c", "d", "e"}}}
+	}{{
+		[]string{
+			filepath.FromSlash("a/b"), filepath.FromSlash("a/b/c/"), "b",
+			filepath.FromSlash("/c/d"), filepath.FromSlash("d/"), filepath.FromSlash("//e//"),
+		},
+		[]string{"a", "a", "b", "c", "d", "e"},
+	}}
 
 	for _, test := range tests {
 		output := ExtractRootPaths(test.input)
@@ -719,7 +523,7 @@ func TestFindCWD(t *testing.T) {
 		expectedErr error
 	}
 
-	//cwd, _ := os.Getwd()
+	// cwd, _ := os.Getwd()
 	data := []test{
 		//{cwd, nil},
 		// Commenting this out. It doesn't work properly.
