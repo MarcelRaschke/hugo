@@ -13,7 +13,7 @@ require (
 	github.com/bep/godartsass/v2 v2.5.0
 	github.com/bep/golibsass v1.2.0
 	github.com/bep/goportabletext v0.1.0
-	github.com/bep/gowebp v0.3.0
+	github.com/bep/gowebp v0.4.0
 	github.com/bep/helpers v0.6.0
 	github.com/bep/imagemeta v0.12.0
 	github.com/bep/lazycache v0.8.0
