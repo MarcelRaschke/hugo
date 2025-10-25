@@ -65,9 +65,9 @@ require (
 	github.com/sanity-io/litter v1.5.8
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cast v1.10.0
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	github.com/spf13/fsync v0.10.1
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.9
 	github.com/tdewolff/minify/v2 v2.24.5
 	github.com/tdewolff/parse/v2 v2.8.5-0.20251020133559-0efcf90bef1a
 	github.com/tetratelabs/wazero v1.9.0
